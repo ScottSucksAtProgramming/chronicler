@@ -1,0 +1,216 @@
+{
+  "session_number": 22,
+  "npcs": [
+    {
+      "name": "The Friendly Face",
+      "first_appeared": "Session-022",
+      "status": "dead",
+      "description": "A cult-affiliated informant who had previously escaped the party. Operated from a booby-trapped safe house. Interrogated and then assassinated by his own clone.",
+      "aliases": ["the friendly face", "the big guy"],
+      "affiliations": ["Sylvie's Cult"],
+      "tags": ["cult", "informant"]
+    },
+    {
+      "name": "Sylvie",
+      "first_appeared": "Session-022",
+      "status": "unknown",
+      "description": "Leader of the cult's smuggling operation. Controls approximately 20 townsfolk.",
+      "aliases": [],
+      "affiliations": ["Sylvie's Cult"],
+      "tags": ["cult", "leader"]
+    },
+    {
+      "name": "Bill Tidewater",
+      "first_appeared": "Session-022",
+      "status": "unknown",
+      "description": "Lives at the farm that serves as a processing center for the cult.",
+      "aliases": [],
+      "affiliations": ["Sylvie's Cult"],
+      "tags": ["cult"]
+    },
+    {
+      "name": "Pavo",
+      "first_appeared": "Session-022",
+      "status": "alive",
+      "description": "Cook on the party's ship. Had last watch with Yisela.",
+      "aliases": ["Uncle Pavo"],
+      "affiliations": [],
+      "tags": ["crew"]
+    },
+    {
+      "name": "Yisela Tideborn",
+      "first_appeared": "Session-022",
+      "status": "alive",
+      "description": "Navigator/cartographer on the party's ship. Was on deck during last watch.",
+      "aliases": [],
+      "affiliations": [],
+      "tags": ["crew"]
+    },
+    {
+      "name": "Lyssa",
+      "first_appeared": "Session-022",
+      "status": "alive",
+      "description": "Someone with authority at the docks who told watchers to leave the party's boat alone.",
+      "aliases": ["Lisa"],
+      "affiliations": [],
+      "tags": ["docks"]
+    },
+    {
+      "name": "Santiago",
+      "first_appeared": "Session-022",
+      "status": "alive",
+      "description": "Crew member who was bad at keeping a stealthy watch. Very obvious when trying to be covert.",
+      "aliases": [],
+      "affiliations": [],
+      "tags": ["crew"]
+    },
+    {
+      "name": "Quattro",
+      "first_appeared": "Session-022",
+      "status": "alive",
+      "description": "Crew member monitoring the Mayweather from across the street. Spotted two dock hand watchers.",
+      "aliases": ["Quantrill"],
+      "affiliations": [],
+      "tags": ["crew"]
+    }
+  ],
+  "locations": [
+    {
+      "name": "The Safe House",
+      "first_appeared": "Session-022",
+      "description": "Single-story booby-trapped house where the Friendly Face was hiding. Ransacked interior, powder traps on windows, poison dart on interior door, rotted floor with necrotic aura, hidden trapdoor to tunnel network.",
+      "aliases": ["the house"],
+      "connected_to": ["Underground Tunnel Network"],
+      "tags": ["cult", "trapped"]
+    },
+    {
+      "name": "Underground Tunnel Network",
+      "first_appeared": "Session-022",
+      "description": "Complex network of six earthen tunnels with cold saltwater. Serves as a smuggling grid connecting multiple locations across the area.",
+      "aliases": ["the tunnels", "smuggling grid"],
+      "connected_to": ["City Docks", "The Farm", "Noble District Wine Cellar", "Second Safe House", "The Safe House"],
+      "tags": ["cult", "smuggling"]
+    },
+    {
+      "name": "The Mayweather",
+      "first_appeared": "Session-022",
+      "description": "A suspicious ship at the docks carrying strange chemicals. Being watched by dock hands and monitored by Quattro.",
+      "aliases": ["the boat"],
+      "connected_to": ["City Docks"],
+      "tags": ["cult", "ship"]
+    },
+    {
+      "name": "The Black Spire",
+      "first_appeared": "Session-022",
+      "description": "A core cult site located in the swamp. Confirmed by the informant as a place where Sylvie has been seen.",
+      "aliases": [],
+      "connected_to": [],
+      "tags": ["cult"]
+    },
+    {
+      "name": "The Farm",
+      "first_appeared": "Session-022",
+      "description": "A remote farm with a still that serves as a processing center for the cult's smuggling operation. Run by Bill Tidewater.",
+      "aliases": ["the nearby farm"],
+      "connected_to": ["Underground Tunnel Network"],
+      "tags": ["cult", "smuggling"]
+    },
+    {
+      "name": "Smoked Eel Tavern",
+      "first_appeared": "Session-022",
+      "description": "A tavern that opens mid-morning. The party needs to visit for information gathering.",
+      "aliases": ["the tavern"],
+      "connected_to": [],
+      "tags": []
+    },
+    {
+      "name": "City Docks",
+      "first_appeared": "Session-022",
+      "description": "Where the party's ship and the Mayweather are docked. One tunnel exit emerges near here with a heavy scent of gillmen.",
+      "aliases": ["the docks"],
+      "connected_to": ["Underground Tunnel Network", "The Mayweather"],
+      "tags": []
+    },
+    {
+      "name": "Second Safe House",
+      "first_appeared": "Session-022",
+      "description": "Identical to the first safe house, accessed via the shortest tunnel through a trapped hatch. Where the informant was found sleeping.",
+      "aliases": [],
+      "connected_to": ["Underground Tunnel Network"],
+      "tags": ["cult"]
+    },
+    {
+      "name": "The Party's Ship",
+      "first_appeared": "Session-022",
+      "description": "The party's own vessel, docked near the Mayweather. Crew members Pavo and Yisela keep watch.",
+      "aliases": ["our ship", "the ship"],
+      "connected_to": ["City Docks"],
+      "tags": []
+    }
+  ],
+  "factions": [
+    {
+      "name": "Sylvie's Cult",
+      "first_appeared": "Session-022",
+      "description": "A smuggling operation controlled by Sylvie. Involves approximately 20 townsfolk. Smuggles chemicals, soil, and sometimes sick people. Uses clones and magical traps. Has operated for at least three months.",
+      "known_members": ["Sylvie", "The Friendly Face", "Bill Tidewater"],
+      "aliases": ["the cult"],
+      "tags": ["antagonist", "smuggling"]
+    }
+  ],
+  "loot": [
+    {
+      "name": "Hallucinogen-Laced Poison",
+      "found_in": "Session-022",
+      "description": "Poison found on dart traps in the safe house. The same type commonly used by the cult."
+    }
+  ],
+  "plot_threads": [
+    {
+      "title": "The Black Spire",
+      "status": "open",
+      "introduced_in": "Session-022",
+      "summary": "A core cult site in the swamp. Confirmed by the informant. Party has not yet visited."
+    },
+    {
+      "title": "The Mayweather Investigation",
+      "status": "open",
+      "introduced_in": "Session-022",
+      "summary": "Suspicious ship carrying cult-related chemicals. Being monitored by Quattro. Dock hands also watching it."
+    },
+    {
+      "title": "Sylvie's Smuggling Operation",
+      "status": "open",
+      "introduced_in": "Session-022",
+      "summary": "Cult smuggling chemicals, soil, and sick people through underground tunnels. ~20 townsfolk involved. Farm serves as processing center."
+    },
+    {
+      "title": "Cult Cloning Activities",
+      "status": "open",
+      "introduced_in": "Session-022",
+      "summary": "The cult uses clones. The informant was killed by his own clone. Attackers who ambushed the party were likely clones too."
+    },
+    {
+      "title": "Unexplored Tunnels",
+      "status": "open",
+      "introduced_in": "Session-022",
+      "summary": "Two of the six tunnels were not explored. Noble district tunnel leads through magical darkness. Full network not yet mapped."
+    }
+  ],
+  "recap": {
+    "session_number": 22,
+    "title": "No Loose Ends Investigation",
+    "summary": "The party pursued a loose end — the 'friendly face' informant with cult connections. After finding his safe house ransacked and booby-trapped, they discovered a hidden underground tunnel network used for smuggling. Following the tunnels to a second safe house, they found and interrogated the informant, extracting critical intelligence about Sylvie's cult operations: smuggling through the tunnels, a processing center at a nearby farm, the Black Spire in the swamp, and the use of clones. The interrogation was cut short when the informant was assassinated by his own clone.",
+    "key_events": [
+      {"description": "Party decided to track down the 'friendly face' informant at 3 AM", "timestamp": "00:17:15"},
+      {"description": "Arcane eye scouting revealed the safe house was ransacked", "timestamp": "00:21:59"},
+      {"description": "Party split into two teams to breach the booby-trapped house", "timestamp": "00:31:42"},
+      {"description": "Magic Mouth triggered a 7th-level Glyph of Warding fireball ambush", "timestamp": null},
+      {"description": "Hidden trapdoor discovered beneath a rug, leading to underground tunnels", "timestamp": null},
+      {"description": "Party explored six earthen tunnels forming a smuggling grid", "timestamp": null},
+      {"description": "Informant found asleep in second safe house and interrogated", "timestamp": null},
+      {"description": "Informant revealed cult details: Sylvie, the farm, the Black Spire, ~20 townsfolk", "timestamp": null},
+      {"description": "Informant assassinated by his own clone via crossbow bolt to the head", "timestamp": null}
+    ]
+  }
+}

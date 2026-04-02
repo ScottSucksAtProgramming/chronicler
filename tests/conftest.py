@@ -1,7 +1,10 @@
 """Shared test fixtures for session_scribe tests."""
 
+import json
 import pytest
 from pathlib import Path
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -32,3 +35,16 @@ def tmp_vault(tmp_path):
     (vault / "Transcripts" / "raw").mkdir(parents=True)
     (vault / "Transcripts" / "normalized").mkdir(parents=True)
     return vault
+
+
+@pytest.fixture
+def session_022_dir():
+    """Path to Session 022 fixture files."""
+    return FIXTURES_DIR / "session_022"
+
+
+@pytest.fixture
+def session_022_golden(session_022_dir):
+    """Load the golden fixture for Session 022."""
+    golden_path = session_022_dir / "golden.json"
+    return json.loads(golden_path.read_text())

@@ -94,7 +94,17 @@ def config() -> None:
         else:
             console.print("\n[green]Vault path exists.[/green]")
     except Exception as e:
-        console.print(f"[red]Configuration error: {e}[/red]")
+        from pydantic import ValidationError
+
+        if isinstance(e, ValidationError):
+            missing = [err["loc"][0] for err in e.errors() if err["type"] == "missing"]
+            if missing:
+                env_vars = [f"SCRIBE_{name.upper()}" for name in missing]
+                console.print(f"[red]Configuration error: missing required setting(s): {', '.join(env_vars)}[/red]")
+            else:
+                console.print(f"[red]Configuration error: {e}[/red]")
+        else:
+            console.print(f"[red]Configuration error: {e}[/red]")
         console.print("\nCopy .env.example to .env and fill in your values:")
         console.print("  cp .env.example .env")
         raise typer.Exit(1)

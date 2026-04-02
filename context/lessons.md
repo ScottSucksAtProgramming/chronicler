@@ -8,3 +8,5 @@ updated: 2026-04-02
 # D&D Session Scribe Lessons Learned
 
 <!-- Append dated one-liners below. When 3+ related lessons accumulate, extract into a dedicated context file. -->
+
+- 2026-04-02 (config): pydantic-settings `SettingsConfigDict` supports `_env_file=None` at construction time to suppress `.env` file loading in tests, which is essential for reliable env-var isolation with `monkeypatch`.

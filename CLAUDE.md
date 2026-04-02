@@ -1,8 +1,8 @@
-# D&D Live Session Scribe
+# D&D Session Scribe
 
 ## Purpose
 
-Real-time AI agent that listens to a D&D session via PLAUD NotePin, transcribes it with whisper.cpp, extracts structured campaign data (NPCs, locations, plot hooks, loot) using a local LLM (LM Studio/Qwen), and auto-populates an Obsidian vault via the Local REST API plugin. Zero manual note-taking during or after play.
+AI agent that ingests PLAUD session recordings (PDF summaries + raw transcripts), extracts structured D&D campaign data via LLM, populates an Obsidian vault, and provides an interactive CLI for querying campaign knowledge. Built for Scott's active campaign (22+ sessions, 7-8 players). Also a portfolio piece.
 
 ## Tree
 
@@ -11,6 +11,32 @@ dnd_notes_organizaer/
   CLAUDE.md
   INDEX.md
   prd.md
+  pyproject.toml
+  .env.example
+  src/
+    session_scribe/
+      __init__.py
+      py.typed
+      cli/
+        main.py          — typer CLI entry point (ingest, chat, review, ask, config, reindex, stats)
+      models/
+        __init__.py      — public exports for all 15+ Pydantic models
+        entities.py      — NPC, Location, Faction, LootItem, PlotThread
+        session.py       — NormalizedSession, TranscriptSegment, SessionRecap, KeyEvent
+        extraction.py    — ExtractionResult, AgentQuestion, QualityScore
+        context.py       — ContextBundle, EntitySummary, AgentMemory, PlayerCharacter
+      gateway/
+        __init__.py
+        llm_gateway.py   — LLMGateway (nano-gpt.com, retries, structured output)
+        types.py         — LLMRequest, LLMResponse, LLMUsage
+      config/
+        settings.py      — Settings via pydantic-settings (SCRIBE_ env prefix)
+  tests/
+    conftest.py          — shared fixtures (settings, tmp_vault)
+    cli/
+    models/
+    gateway/
+    config/
   docs/
     interview-notes.md
     superpowers/
@@ -26,12 +52,36 @@ dnd_notes_organizaer/
 ## Rules
 
 1. On session start within `dnd_notes_organizaer/`, read this file, then `INDEX.md`.
-2. The PRD (`prd.md`) is the source of truth for project scope and phased build plan. Reference it before proposing new features or architecture changes.
-3. This project reuses patterns from `../EMScribe/` (Python transcript processing) and `../whisper.cpp/` (ASR). Check those projects for reference implementations before building from scratch.
-4. The target Obsidian vault structure is defined in the PRD. Do not deviate from it without discussing with Scott.
-5. All LLM inference runs locally via LM Studio — no external API calls. Do not introduce cloud API dependencies.
-6. When creating, renaming, or deleting files, update the Tree section above.
-7. Follow the Note-Taking protocol below after completing tasks.
+2. The **design spec** (`docs/superpowers/specs/2026-04-02-session-scribe-design.md`) is the primary reference for architecture, modules, and scope. The original PRD is historical only.
+3. Read the relevant **milestone plan** before starting implementation work.
+4. Do not deviate from the vault structure or module boundaries in the spec without discussing with Scott.
+5. When creating, renaming, or deleting files, update the Tree section above.
+6. Follow the Note-Taking protocol below after completing tasks.
+
+## Core Principles
+
+These are non-negotiable. See the design spec Section 2 for full details.
+
+- **Clean Architecture:** Dependencies point inward. Domain logic never depends on infrastructure.
+- **Testability First:** TDD. Golden fixtures. User-style testing after every milestone.
+- **Explicit Over Clever:** Type hints everywhere. Pydantic models for all data. No raw dicts. No magic.
+- **Small Files, Clear Boundaries:** No file over ~300 lines. One job per module.
+- **Fail Loudly, Recover Gracefully:** Never swallow errors. Validate LLM outputs.
+- **Vault is Source of Truth:** Agent memory, campaign state, everything lives in the Obsidian vault.
+
+## Stack
+
+| Component | Choice |
+|-----------|--------|
+| Language | Python 3.12+ |
+| LLM API | nano-gpt.com (via LLM Gateway) |
+| Embeddings | LM Studio serving nomic-embed-text-v1.5 locally |
+| Vector store | ChromaDB |
+| PDF parsing | pdfplumber |
+| Vault integration | Obsidian CLI + direct filesystem |
+| CLI | typer (commands) + textual (chat TUI) |
+| Testing | pytest, golden fixtures, user-style QA |
+| Package mgmt | uv |
 
 ## Note-Taking
 
@@ -43,8 +93,8 @@ After completing any task — feature work, bug fix, discovery, or debugging ses
 ```
 
 **When to write a lesson:**
-- You learned something non-obvious about whisper.cpp streaming, LM Studio, or the Obsidian REST API.
-- A timing assumption, chunk size, or deduplication approach surprised you.
+- You learned something non-obvious about the LLM Gateway, Obsidian CLI, PLAUD parsing, or extraction quality.
+- A timing assumption, deduplication approach, or prompt strategy surprised you.
 - You made a mistake that future work should avoid.
 - A design decision was validated or invalidated by testing.
 

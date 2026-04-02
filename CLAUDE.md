@@ -31,12 +31,23 @@ dnd_notes_organizaer/
         types.py         — LLMRequest, LLMResponse, LLMUsage
       config/
         settings.py      — Settings via pydantic-settings (SCRIBE_ env prefix)
+      ingestion/
+        __init__.py
+        pdf_parser.py    — parse_plaud_pdf, ParsedPDF, PDFSection, PLAUDParseError
+      vault/
+        __init__.py
+        obsidian_cli.py  — ObsidianCLI, ObsidianCLIError (low-level CLI wrapper)
   tests/
     conftest.py          — shared fixtures (settings, tmp_vault)
     cli/
     models/
     gateway/
     config/
+    ingestion/
+      test_pdf_parser.py
+    vault/
+      __init__.py
+      test_obsidian_cli.py
   docs/
     interview-notes.md
     superpowers/

@@ -19,3 +19,4 @@ updated: 2026-04-02
 - 2026-04-02 (gateway): Kimi Code CLI (`kimi --quiet -p`) works as an LLM provider but is much slower than API calls. Default timeout needs to be 120s+ for full session extraction. The `--quiet` flag gives clean text output suitable for JSON parsing.
 - 2026-04-02 (extraction): PDF-only extraction (no transcript) produces good results — 6 NPCs, 11 locations from a single session. The PLAUD summary is high enough signal that transcript is truly supplementary, not required.
 - 2026-04-02 (testing): async fixtures in pytest-asyncio STRICT mode cause collection errors even when marked as integration. Use sync `asyncio.run()` with module-level cache instead of async fixtures for integration tests.
+- 2026-04-02 (vault): The Obsidian CLI binary uses `key=value` positional args that require `shell=True` in subprocess — quoting the binary path and passing args as a single string is the only reliable way to call it from Python.

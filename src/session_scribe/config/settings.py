@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Required
     vault_path: Path
+    vault_name: str = ""  # Obsidian vault name for CLI commands
 
     # LLM provider: "kimi" or "nanogpt"
     llm_provider: str = "kimi"

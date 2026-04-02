@@ -12,7 +12,9 @@ env/
 
 # Environment and secrets
 .env
-.env.*
+.env.local
+.env.production
+!.env.example
 *.key
 
 # Obsidian REST API key

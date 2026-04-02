@@ -14,8 +14,13 @@ from typing import Optional
 
 DEFAULT_BINARY = "/Applications/Obsidian.app/Contents/MacOS/obsidian"
 
-# Stderr lines that are noise — not real errors.
-_STDERR_NOISE = ("Loading...", "out of date", "Obsidian", "Warning:")
+# Stdout/stderr lines that are noise — not real errors or data.
+# The Obsidian CLI outputs loading messages and update warnings to STDOUT.
+_STDERR_NOISE = (
+    "Loading",        # "Loading updated app package..."
+    "out of date",    # "Your Obsidian installer is out of date..."
+    "download",       # "Please download the latest installer..."
+)
 
 
 class ObsidianCLIError(Exception):
@@ -80,7 +85,13 @@ class ObsidianCLI:
             detail = real_stderr or result.stdout.strip() or f"exit code {result.returncode}"
             raise ObsidianCLIError(f"CLI error: {detail}")
 
-        return result.stdout.strip()
+        # Filter noise from stdout too — Obsidian CLI outputs loading messages
+        # and update warnings to stdout, not just stderr.
+        stdout_lines = [
+            line for line in result.stdout.splitlines()
+            if line.strip() and not any(noise in line for noise in _STDERR_NOISE)
+        ]
+        return "\n".join(stdout_lines).strip()
 
     def _get_vault_path(self) -> Optional[str]:
         """Return the filesystem path for the configured vault, or None on failure."""
@@ -167,7 +178,13 @@ class ObsidianCLI:
         raw = self._run(
             f'search query="{query}" vault="{self.vault_name}" format=json'
         )
-        return json.loads(raw)
+        if not raw:
+            return []
+        try:
+            result = json.loads(raw)
+            return result if isinstance(result, list) else []
+        except json.JSONDecodeError:
+            return []
 
     def set_property(self, path: str, name: str, value: str) -> None:
         """Set a frontmatter property on a note.
@@ -196,7 +213,14 @@ class ObsidianCLI:
             )
         else:
             raw = self._run(f'files vault="{self.vault_name}" format=json')
-        return json.loads(raw)
+        if not raw:
+            return []
+        try:
+            result = json.loads(raw)
+            return result if isinstance(result, list) else []
+        except json.JSONDecodeError:
+            # Fallback: newline-separated paths
+            return [line.strip() for line in raw.splitlines() if line.strip()]
 
     def list_folders(self) -> list[str]:
         """Return a list of all folder paths in the vault.

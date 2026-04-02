@@ -26,8 +26,9 @@ packages = ["src/session_scribe"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "-m 'not integration'"
 markers = [
-    "integration: marks tests that require external services (deselect with '-m \"not integration\"')",
+    "integration: marks tests that require external services (run with '-m integration')",
 ]
 
 [dependency-groups]

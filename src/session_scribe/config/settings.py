@@ -20,11 +20,17 @@ class Settings(BaseSettings):
 
     # Required
     vault_path: Path
-    nanogpt_api_key: str
 
-    # LLM settings
+    # LLM provider: "kimi" or "nanogpt"
+    llm_provider: str = "kimi"
+
+    # nano-gpt.com settings (only required when llm_provider="nanogpt")
+    nanogpt_api_key: str = ""
     nanogpt_base_url: str = "https://nano-gpt.com/api/v1"
     nanogpt_model: str = "chatgpt-4o-latest"
+
+    # Kimi CLI settings (only required when llm_provider="kimi")
+    kimi_model: str = ""  # empty = use kimi's default model
 
     # LM Studio (local embeddings)
     lm_studio_base_url: str = "http://localhost:1234/v1"

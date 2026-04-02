@@ -1,8 +1,14 @@
-"""LLM Gateway — single integration point for all LLM calls."""
+"""LLM Gateway — single integration point for all LLM calls.
+
+Supports two providers:
+- "kimi": Uses Kimi Code CLI (kimi --quiet -p) for LLM calls. No API key needed.
+- "nanogpt": Uses nano-gpt.com HTTP API. Requires SCRIBE_NANOGPT_API_KEY.
+"""
 
 import asyncio
 import json
 import logging
+import subprocess
 import time
 from typing import TypeVar
 
@@ -22,21 +28,106 @@ class LLMGatewayError(Exception):
 
 
 class LLMGateway:
-    """Single integration point for all LLM API calls."""
+    """Single integration point for all LLM API calls.
+
+    Routes calls to either Kimi CLI or nano-gpt.com based on settings.llm_provider.
+    """
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self._client = httpx.AsyncClient(
-            base_url=settings.nanogpt_base_url,
-            headers={
-                "Authorization": f"Bearer {settings.nanogpt_api_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=settings.llm_timeout_seconds,
-        )
+        self._client: httpx.AsyncClient | None = None
+
+        if settings.llm_provider == "nanogpt":
+            if not settings.nanogpt_api_key:
+                raise LLMGatewayError(
+                    "SCRIBE_NANOGPT_API_KEY is required when llm_provider='nanogpt'"
+                )
+            self._client = httpx.AsyncClient(
+                base_url=settings.nanogpt_base_url,
+                headers={
+                    "Authorization": f"Bearer {settings.nanogpt_api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=settings.llm_timeout_seconds,
+            )
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
-        """Send a completion request to the LLM API with retries."""
+        """Send a completion request to the configured LLM provider."""
+        if self.settings.llm_provider == "kimi":
+            return await self._complete_kimi(request)
+        else:
+            return await self._complete_nanogpt(request)
+
+    async def _complete_kimi(self, request: LLMRequest) -> LLMResponse:
+        """Send a completion request via Kimi Code CLI."""
+        # Build the prompt from messages
+        prompt_parts = []
+        for msg in request.messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system":
+                prompt_parts.append(f"[System instruction]: {content}")
+            elif role == "assistant":
+                prompt_parts.append(f"[Previous response]: {content}")
+            else:
+                prompt_parts.append(content)
+
+        full_prompt = "\n\n".join(prompt_parts)
+
+        # Build kimi command
+        cmd = ["kimi", "--quiet", "-p", full_prompt]
+        if self.settings.kimi_model:
+            cmd.extend(["-m", self.settings.kimi_model])
+
+        start = time.monotonic()
+        try:
+            # Run kimi CLI in a thread to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.settings.llm_timeout_seconds * 4,  # kimi can be slower
+                ),
+            )
+            latency = time.monotonic() - start
+
+            if result.returncode != 0:
+                error_msg = result.stderr.strip() or f"kimi exited with code {result.returncode}"
+                raise LLMGatewayError(f"Kimi CLI error: {error_msg}")
+
+            content = result.stdout.strip()
+            if not content:
+                raise LLMGatewayError("Kimi CLI returned empty response")
+
+            response = LLMResponse(
+                content=content,
+                model=self.settings.kimi_model or "kimi-default",
+                usage=LLMUsage(prompt_tokens=0, completion_tokens=0),  # Kimi doesn't report usage
+            )
+
+            logger.info(
+                "Kimi call: latency=%.2fs, response_len=%d",
+                latency,
+                len(content),
+            )
+            return response
+
+        except subprocess.TimeoutExpired:
+            raise LLMGatewayError(
+                f"Kimi CLI timed out after {self.settings.llm_timeout_seconds * 4}s"
+            )
+        except FileNotFoundError:
+            raise LLMGatewayError(
+                "Kimi CLI not found. Install it: https://moonshotai.github.io/kimi-cli/"
+            )
+
+    async def _complete_nanogpt(self, request: LLMRequest) -> LLMResponse:
+        """Send a completion request to the nano-gpt.com API with retries."""
+        assert self._client is not None, "HTTP client not initialized for nanogpt provider"
+
         last_error: Exception | None = None
         backoff = 1.0
 
@@ -57,13 +148,17 @@ class LLMGateway:
                 response.raise_for_status()
                 data = response.json()
 
+                # Parse usage tolerantly — some providers don't include it
+                usage_data = data.get("usage", {})
+                usage = LLMUsage(
+                    prompt_tokens=usage_data.get("prompt_tokens", 0),
+                    completion_tokens=usage_data.get("completion_tokens", 0),
+                )
+
                 result = LLMResponse(
                     content=data["choices"][0]["message"]["content"],
                     model=data.get("model", request.model),
-                    usage=LLMUsage(
-                        prompt_tokens=data["usage"]["prompt_tokens"],
-                        completion_tokens=data["usage"]["completion_tokens"],
-                    ),
+                    usage=usage,
                 )
 
                 logger.info(
@@ -74,7 +169,7 @@ class LLMGateway:
                 )
                 return result
 
-            except (httpx.HTTPError, KeyError) as e:
+            except (httpx.HTTPError, KeyError, IndexError) as e:
                 last_error = e
                 if attempt < self.settings.llm_max_retries:
                     logger.warning(
@@ -96,12 +191,10 @@ class LLMGateway:
         """Remove markdown code fences from LLM output if present."""
         text = text.strip()
         if text.startswith("```"):
-            # Remove opening fence (with optional language tag)
             first_newline = text.find("\n")
             if first_newline == -1:
-                return text  # Malformed — just backticks with nothing after
+                return text
             text = text[first_newline + 1:]
-            # Remove closing fence
             if text.rstrip().endswith("```"):
                 text = text.rstrip().rsplit("```", 1)[0].strip()
         return text
@@ -148,5 +241,6 @@ class LLMGateway:
                 ) from retry_error
 
     async def close(self) -> None:
-        """Close the HTTP client."""
-        await self._client.aclose()
+        """Close the HTTP client if one was created."""
+        if self._client:
+            await self._client.aclose()

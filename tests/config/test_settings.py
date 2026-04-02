@@ -11,10 +11,20 @@ class TestSettings:
 
         settings = Settings(
             vault_path=Path("/tmp/test-vault"),
-            nanogpt_api_key="test-key-123",
             _env_file=None,
         )
         assert settings.vault_path == Path("/tmp/test-vault")
+        assert settings.llm_provider == "kimi"  # default provider
+
+    def test_load_nanogpt_settings(self):
+        from session_scribe.config.settings import Settings
+
+        settings = Settings(
+            vault_path=Path("/tmp/test-vault"),
+            llm_provider="nanogpt",
+            nanogpt_api_key="test-key-123",
+            _env_file=None,
+        )
         assert settings.nanogpt_api_key == "test-key-123"
         assert settings.nanogpt_model is not None
 

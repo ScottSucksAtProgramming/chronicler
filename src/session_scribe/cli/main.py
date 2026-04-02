@@ -77,6 +77,13 @@ async def _run_ingest_pipeline(
             raw_text = txt_files[0].read_text(encoding="utf-8")
             transcript_segments = parse_transcript(raw_text)
 
+        # Determine model name based on provider
+        model = (
+            settings.kimi_model or "kimi-default"
+            if settings.llm_provider == "kimi"
+            else settings.nanogpt_model
+        )
+
         # Step 3: Normalize session (includes banter filtering)
         console.print("[cyan]Filtering banter...[/cyan]")
         normalized = await normalize_session(
@@ -84,7 +91,7 @@ async def _run_ingest_pipeline(
             parsed_pdf=parsed_pdf,
             transcript_segments=transcript_segments,
             gateway=gateway,
-            model=settings.nanogpt_model,
+            model=model,
         )
 
         # Step 4: Extract entities
@@ -94,7 +101,7 @@ async def _run_ingest_pipeline(
             session=normalized,
             context=context,
             gateway=gateway,
-            model=settings.nanogpt_model,
+            model=model,
         )
 
         return result
@@ -207,7 +214,12 @@ def config() -> None:
         settings = Settings()
         console.print("[bold]Session Scribe Configuration[/bold]")
         console.print(f"  Vault path:       {settings.vault_path}")
-        console.print(f"  nano-gpt model:   {settings.nanogpt_model}")
+        console.print(f"  LLM provider:     {settings.llm_provider}")
+        if settings.llm_provider == "kimi":
+            console.print(f"  Kimi model:       {settings.kimi_model or '(default)'}")
+        else:
+            console.print(f"  nano-gpt model:   {settings.nanogpt_model}")
+            console.print(f"  API key:          {'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}")
         console.print(f"  LM Studio URL:    {settings.lm_studio_base_url}")
         console.print(f"  Embedding model:  {settings.embedding_model}")
         console.print(f"  Log level:        {settings.log_level}")

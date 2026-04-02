@@ -14,6 +14,7 @@ def settings():
 
     return Settings(
         vault_path=Path("/tmp/test-vault"),
+        llm_provider="nanogpt",
         nanogpt_api_key="test-key-123",
         _env_file=None,
     )

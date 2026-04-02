@@ -38,5 +38,5 @@ class Settings(BaseSettings):
 
     # Operational
     log_level: str = "INFO"
-    llm_timeout_seconds: int = 30
+    llm_timeout_seconds: int = 120
     llm_max_retries: int = 3

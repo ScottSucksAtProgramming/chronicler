@@ -78,6 +78,14 @@ class TestFaction:
         )
         assert len(faction.known_members) == 3
 
+    def test_faction_requires_name(self):
+        with pytest.raises(Exception):
+            Faction(first_appeared="Session-022")
+
+    def test_faction_requires_first_appeared(self):
+        with pytest.raises(Exception):
+            Faction(name="Test Faction")
+
 
 class TestLootItem:
     def test_create_loot_item(self):
@@ -87,6 +95,14 @@ class TestLootItem:
             description="Poison commonly used by the cult, found on dart traps.",
         )
         assert item.name == "Hallucinogen-Laced Poison"
+
+    def test_loot_requires_name(self):
+        with pytest.raises(Exception):
+            LootItem(found_in="Session-022")
+
+    def test_loot_requires_found_in(self):
+        with pytest.raises(Exception):
+            LootItem(name="Magic Sword")
 
 
 class TestPlotThread:

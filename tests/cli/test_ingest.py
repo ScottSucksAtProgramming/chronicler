@@ -89,7 +89,7 @@ class TestIngestCommand:
         pdf_file = tmp_path / "session.pdf"
         pdf_file.write_bytes(b"%PDF-1.4 fake")
 
-        with patch("session_scribe.config.settings.Settings", side_effect=Exception("Missing API key")):
+        with patch("session_scribe.cli.main.Settings", side_effect=Exception("Missing API key")):
             result = runner.invoke(app, ["ingest", str(pdf_file)])
 
         assert result.exit_code == 1

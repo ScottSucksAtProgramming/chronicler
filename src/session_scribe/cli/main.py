@@ -7,6 +7,10 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
+from session_scribe.config.settings import Settings
+from session_scribe.vault.obsidian_cli import ObsidianCLI
+from session_scribe.vault.vault_manager import VaultManager
+
 app = typer.Typer(
     name="scribe",
     help="D&D Session Scribe — AI-powered campaign note management.",
@@ -42,7 +46,6 @@ async def _run_ingest_pipeline(
     txt_files: list[Path],
 ) -> "ExtractionResult":
     """Async helper that runs the full ingestion and extraction pipeline."""
-    from session_scribe.config.settings import Settings
     from session_scribe.extraction.extractor import extract_session
     from session_scribe.gateway.llm_gateway import LLMGateway
     from session_scribe.ingestion.normalizer import normalize_session
@@ -77,6 +80,20 @@ async def _run_ingest_pipeline(
             raw_text = txt_files[0].read_text(encoding="utf-8")
             transcript_segments = parse_transcript(raw_text)
 
+        # Step 2b: Create VaultManager and get context from vault
+        if settings.vault_name:
+            cli = ObsidianCLI(settings.vault_name)
+            vault_manager = VaultManager(cli)
+            try:
+                console.print("[cyan]Loading campaign context from vault...[/cyan]")
+                context = vault_manager.get_context_bundle(session_number)
+            except Exception:
+                # Vault may not be initialized yet — fall back to empty context
+                context = ContextBundle(session_number=session_number)
+        else:
+            vault_manager = None
+            context = ContextBundle(session_number=session_number)
+
         # Determine model name based on provider
         model = (
             settings.kimi_model or "kimi-default"
@@ -94,15 +111,34 @@ async def _run_ingest_pipeline(
             model=model,
         )
 
-        # Step 4: Extract entities
+        # Step 4: Extract entities (with campaign context)
         console.print("[cyan]Extracting entities...[/cyan]")
-        context = ContextBundle(session_number=session_number)
         result = await extract_session(
             session=normalized,
             context=context,
             gateway=gateway,
             model=model,
         )
+
+        # Step 5: Write extraction result to vault
+        if vault_manager is not None:
+            try:
+                console.print("[cyan]Writing notes to vault...[/cyan]")
+                vault_manager.write_extraction_result(result)
+                total = (
+                    len(result.npcs)
+                    + len(result.locations)
+                    + len(result.factions)
+                    + len(result.loot)
+                    + 1  # session note
+                )
+                console.print(
+                    f"[green]Notes written to vault:[/green] {total} notes created/updated"
+                )
+            except Exception as exc:
+                console.print(
+                    f"[yellow]Warning: Could not write to vault: {exc}[/yellow]"
+                )
 
         return result
     finally:
@@ -182,6 +218,41 @@ def ingest(
 
 
 @app.command()
+def init() -> None:
+    """Initialise the Obsidian vault folder structure for Session Scribe."""
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        console.print("\nCopy .env.example to .env and fill in your values:")
+        console.print("  cp .env.example .env")
+        raise typer.Exit(1)
+
+    if not settings.vault_name:
+        console.print(
+            "[red]Error: SCRIBE_VAULT_NAME is not set.[/red]\n"
+            "Set the vault name in your .env file or environment:\n"
+            "  export SCRIBE_VAULT_NAME='My Campaign Vault'"
+        )
+        raise typer.Exit(1)
+
+    cli = ObsidianCLI(settings.vault_name)
+    vault_manager = VaultManager(cli)
+
+    try:
+        vault_manager.init_vault()
+    except Exception as exc:
+        console.print(f"[red]Failed to initialise vault: {exc}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold green]Vault initialised![/bold green]")
+    console.print(f"  Vault name: {settings.vault_name}")
+    console.print("  Created folders: Sessions, NPCs, Locations, Factions, Loot, Plot-Threads, _Agent")
+    console.print("  Created seed files: Dashboard, Timeline, Open/Closed Threads, Agent Memory")
+    console.print("\nYou're ready to run [bold]scribe ingest[/bold].")
+
+
+@app.command()
 def chat() -> None:
     """Open interactive campaign Q&A chat."""
     console.print("[yellow]Chat TUI not yet implemented.[/yellow]")
@@ -209,8 +280,6 @@ def reindex() -> None:
 def config() -> None:
     """Show current configuration and verify setup."""
     try:
-        from session_scribe.config.settings import Settings
-
         settings = Settings()
         console.print("[bold]Session Scribe Configuration[/bold]")
         console.print(f"  Vault path:       {settings.vault_path}")

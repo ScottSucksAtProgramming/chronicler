@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Environment and secrets
+.env
+.env.*
+*.key
+
+# Obsidian REST API key
+obsidian-api-key.txt
+
+# Audio files (large, not source)
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
+
+# Transcription output (regenerable)
+transcripts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

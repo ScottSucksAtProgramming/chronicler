@@ -138,6 +138,28 @@ class TestLLMGateway:
             assert result.age == 30
 
     @pytest.mark.asyncio
+    async def test_complete_structured_strips_markdown_code_block(self, settings):
+        gateway = LLMGateway(settings)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": '```json\n{"name": "Alice", "age": 25}\n```'}}],
+            "model": "test-model",
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+        }
+
+        with patch.object(gateway, "_client") as mock_client:
+            mock_client.post = AsyncMock(return_value=mock_response)
+            result = await gateway.complete_structured(
+                LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model"),
+                output_type=SampleOutput,
+            )
+            assert result.name == "Alice"
+            assert result.age == 25
+
+    @pytest.mark.asyncio
     async def test_complete_structured_invalid_json_retries(self, settings):
         gateway = LLMGateway(settings)
 

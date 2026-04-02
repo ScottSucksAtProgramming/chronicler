@@ -91,6 +91,21 @@ class LLMGateway:
             f"LLM call failed after {self.settings.llm_max_retries + 1} attempts: {last_error}"
         )
 
+    @staticmethod
+    def _strip_code_fences(text: str) -> str:
+        """Remove markdown code fences from LLM output if present."""
+        text = text.strip()
+        if text.startswith("```"):
+            # Remove opening fence (with optional language tag)
+            first_newline = text.find("\n")
+            if first_newline == -1:
+                return text  # Malformed — just backticks with nothing after
+            text = text[first_newline + 1:]
+            # Remove closing fence
+            if text.rstrip().endswith("```"):
+                text = text.rstrip().rsplit("```", 1)[0].strip()
+        return text
+
     async def complete_structured(
         self,
         request: LLMRequest,
@@ -100,9 +115,7 @@ class LLMGateway:
         response = await self.complete(request)
 
         try:
-            content = response.content.strip()
-            if content.startswith("```"):
-                content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            content = self._strip_code_fences(response.content)
             parsed = json.loads(content)
             return output_type.model_validate(parsed)
         except (json.JSONDecodeError, ValidationError) as e:
@@ -126,9 +139,7 @@ class LLMGateway:
             retry_response = await self.complete(corrective_request)
 
             try:
-                content = retry_response.content.strip()
-                if content.startswith("```"):
-                    content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                content = self._strip_code_fences(retry_response.content)
                 parsed = json.loads(content)
                 return output_type.model_validate(parsed)
             except (json.JSONDecodeError, ValidationError) as retry_error:

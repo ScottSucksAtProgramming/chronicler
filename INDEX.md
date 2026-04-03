@@ -10,6 +10,7 @@ Quick reference for the repository.
 | `.env.example` | Example configuration for local setup |
 | `pyproject.toml` | Package metadata, dependencies, and CLI entrypoint |
 | `INDEX.md` | This file |
+| `CLAUDE.md` | Project-specific operating rules, note-taking requirements, and repo tree |
 
 ## Active Documentation
 
@@ -18,7 +19,13 @@ Quick reference for the repository.
 | `docs/interview-notes.md` | Original discovery notes and project context |
 | `docs/superpowers/specs/2026-04-02-session-scribe-design.md` | Historical primary architecture spec created before the rename |
 | `docs/superpowers/specs/2026-04-02-chronicler-rename-and-docs-design.md` | Rename and documentation design for the Chronicler transition |
+| `docs/superpowers/specs/2026-04-03-hybrid-chat-vault-reads-design.md` | Hybrid chat design that combines direct vault reads with retrieval |
+| `docs/superpowers/specs/2026-04-03-vault-improve-design.md` | Design for deterministic full-vault maintenance and ambiguity routing |
+| `docs/superpowers/specs/2026-04-03-party-notes-maintenance-design.md` | Design for evolving party notes as maintained entity records |
 | `docs/superpowers/plans/2026-04-02-chronicler-rename-and-docs.md` | Implementation plan for the rename and documentation pass |
+| `docs/superpowers/plans/2026-04-03-hybrid-chat-vault-reads.md` | Implementation plan for hybrid vault-aware chat |
+| `docs/superpowers/plans/2026-04-03-vault-improve.md` | Implementation plan for `chronicler improve` |
+| `docs/superpowers/plans/2026-04-03-party-notes-maintenance.md` | Implementation plan for maintained party-note updates |
 
 ## Source Layout
 
@@ -34,6 +41,14 @@ Quick reference for the repository.
 | `src/chronicler/chat/` | Textual chat interface |
 | `src/chronicler/reviewer/` | Vault review checks and reporting |
 | `src/chronicler/models/` | Shared Pydantic domain models |
+
+## Repo-Only State
+
+| Path | Purpose |
+|------|---------|
+| `context/conventions.md` | Working conventions, testing expectations, and repo norms |
+| `context/lessons.md` | Running development lessons and non-obvious discoveries |
+| `LICENSE` | MIT license |
 
 ## Tests And Fixtures
 
@@ -56,5 +71,9 @@ Quick reference for the repository.
 |------|---------|
 | `prd.md` | Original project requirements draft |
 | `docs/superpowers/plans/` | Milestone implementation plans from earlier development phases |
-| `context/conventions.md` | Coding and repo conventions used during development |
-| `context/lessons.md` | Development notes and lessons learned |
+| `docs/superpowers/plans/2026-04-02-milestone-1-foundation.md` | Early milestone implementation record |
+| `docs/superpowers/plans/2026-04-02-milestone-2-ingestion-extraction.md` | Early ingestion/extraction implementation record |
+| `docs/superpowers/plans/2026-04-02-milestone-3-vault-management.md` | Early vault-management implementation record |
+| `docs/superpowers/plans/2026-04-02-milestone-4-reviewer-and-ask.md` | Early reviewer/ask implementation record |
+| `docs/superpowers/plans/2026-04-03-milestone-5-retrieval-chat.md` | Early retrieval/chat implementation record |
+| `docs/superpowers/plans/2026-04-03-milestone-6-backlog-ready.md` | Early backlog-ready planning record |

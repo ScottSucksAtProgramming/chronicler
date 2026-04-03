@@ -43,6 +43,10 @@ Thumbs.db
 
 # PLAUD source files (large, not code)
 04-01 Summary*
+
+# Accidental local vault/template output
+_Agent/
+*Loading updated app package*
 # ChromaDB local storage
 .chronicler/
 

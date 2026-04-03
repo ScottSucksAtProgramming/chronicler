@@ -1,4 +1,0 @@
----
-type: agent-memory
----
-

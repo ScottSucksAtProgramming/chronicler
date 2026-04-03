@@ -1,6 +1,9 @@
 """Session Scribe CLI — entry point for all user interaction."""
 
 import asyncio
+import re
+import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -8,6 +11,7 @@ import typer
 from rich.console import Console
 
 from session_scribe.config.settings import Settings
+from session_scribe.reviewer import review_vault
 from session_scribe.vault.obsidian_cli import ObsidianCLI
 from session_scribe.vault.vault_manager import VaultManager
 
@@ -261,13 +265,144 @@ def chat() -> None:
 @app.command()
 def review() -> None:
     """Run a quality review pass over the vault."""
-    console.print("[yellow]Reviewer not yet implemented.[/yellow]")
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        raise typer.Exit(1)
+
+    if not settings.vault_name:
+        console.print("[red]Error: SCRIBE_VAULT_NAME is not set.[/red]")
+        raise typer.Exit(1)
+
+    cli = ObsidianCLI(settings.vault_name)
+    report = review_vault(cli)
+
+    # Print each finding with severity-based colouring
+    for finding in report.findings:
+        if finding.severity.value == "error":
+            style = "red"
+        elif finding.severity.value == "warning":
+            style = "yellow"
+        else:
+            style = "dim"
+
+        file_str = f" [{finding.file}]" if finding.file else ""
+        console.print(f"[{style}]{finding.severity.value.upper()}{file_str}: {finding.detail}[/{style}]")
+
+    # Summary
+    console.print(
+        f"\nReview complete: {report.error_count} errors, "
+        f"{report.warning_count} warnings, {report.info_count} info"
+    )
+
+    # Write findings to _Agent/Review-Log.md
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    log_lines = [f"\n\n## Review — {timestamp}\n"]
+    if report.findings:
+        for f in report.findings:
+            log_lines.append(f"- **{f.severity.value.upper()}** {f.file}: {f.detail}")
+    else:
+        log_lines.append("- No issues found.")
+    log_lines.append(
+        f"\n**Summary:** {report.error_count} errors, "
+        f"{report.warning_count} warnings, {report.info_count} info\n"
+    )
+
+    try:
+        cli.append("_Agent/Review-Log.md", "\n".join(log_lines))
+    except Exception:
+        # If the file doesn't exist yet, create it
+        try:
+            cli.create("_Agent/Review-Log.md", "# Review Log\n" + "\n".join(log_lines))
+        except Exception as exc:
+            console.print(f"[yellow]Warning: Could not write review log: {exc}[/yellow]")
 
 
 @app.command()
 def ask() -> None:
     """Review and answer the agent's pending questions."""
-    console.print("[yellow]Question queue not yet implemented.[/yellow]")
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        raise typer.Exit(1)
+
+    if not settings.vault_name:
+        console.print("[red]Error: SCRIBE_VAULT_NAME is not set.[/red]")
+        raise typer.Exit(1)
+
+    cli = ObsidianCLI(settings.vault_name)
+
+    # List question files, excluding the answered/ subfolder
+    all_questions = cli.find_notes_in_folder("_Agent/Questions/")
+    questions = [
+        q for q in all_questions
+        if not q.startswith("_Agent/Questions/answered/")
+    ]
+
+    if not questions:
+        console.print("No pending questions.")
+        raise typer.Exit()
+
+    interactive = sys.stdin.isatty()
+    answered_count = 0
+
+    for q_path in questions:
+        try:
+            content = cli.read(q_path)
+        except Exception:
+            console.print(f"[yellow]Could not read {q_path}[/yellow]")
+            continue
+
+        # Parse title from # heading
+        title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
+        title = title_match.group(1).strip() if title_match else Path(q_path).stem
+
+        # Parse context from ## Context section
+        context_match = re.search(
+            r"^##\s+Context\s*\n(.*?)(?=\n##|\Z)", content, re.MULTILINE | re.DOTALL
+        )
+        context_text = context_match.group(1).strip() if context_match else ""
+
+        # Parse priority and source_session from frontmatter
+        priority = ""
+        source_session = ""
+        fm_match = re.match(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+        if fm_match:
+            fm = fm_match.group(1)
+            p_match = re.search(r"priority:\s*(.+)", fm)
+            if p_match:
+                priority = p_match.group(1).strip()
+            s_match = re.search(r"source_session:\s*(.+)", fm)
+            if s_match:
+                source_session = s_match.group(1).strip()
+
+        # Display
+        console.print(f"\n[bold]{title}[/bold]")
+        if context_text:
+            console.print(f"[dim]{context_text}[/dim]")
+        meta_parts = []
+        if priority:
+            meta_parts.append(f"Priority: {priority}")
+        if source_session:
+            meta_parts.append(f"Session: {source_session}")
+        if meta_parts:
+            console.print(f"[dim]({', '.join(meta_parts)})[/dim]")
+
+        if not interactive:
+            continue
+
+        answer = input("Your answer (Enter to skip): ")
+        if answer.strip():
+            try:
+                cli.append(q_path, f"\n\n## Answer\n\n{answer.strip()}")
+                answered_count += 1
+                console.print("[green]Answer saved.[/green]")
+            except Exception as exc:
+                console.print(f"[yellow]Could not save answer: {exc}[/yellow]")
+
+    console.print(f"\nAnswered {answered_count} of {len(questions)} questions.")
 
 
 @app.command()

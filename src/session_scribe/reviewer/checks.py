@@ -1,7 +1,10 @@
 """Individual vault quality check functions.
 
-Each function accepts an ObsidianCLI instance and returns a list of
-ReviewFinding objects describing issues found in the vault.
+Each function accepts a vault snapshot (dict mapping path → content) and returns
+a list of ReviewFinding objects describing issues found.
+
+The snapshot is loaded once by the orchestrator via ObsidianCLI.read_all_notes()
+so that checks never make CLI subprocess calls themselves.
 """
 
 from __future__ import annotations
@@ -26,6 +29,9 @@ _REQUIRED_SECTIONS: dict[str, list[str]] = {
     "Factions/": ["Summary"],
     "Sessions/": ["Summary"],
 }
+
+# Type alias for the vault snapshot
+VaultSnapshot = dict[str, str]  # path → content
 
 
 class Severity(str, Enum):
@@ -59,9 +65,9 @@ def _extract_wikilinks(content: str) -> list[str]:
     return _WIKILINK_RE.findall(content)
 
 
-def _path_to_link_target(path: str) -> str:
-    """Convert a vault path like 'NPCs/Theron.md' to 'Theron'."""
-    return _stem(path)
+def _notes_in_folder(snapshot: VaultSnapshot, folder: str) -> dict[str, str]:
+    """Filter snapshot to notes within a specific folder."""
+    return {p: c for p, c in snapshot.items() if p.startswith(folder)}
 
 
 # ---------------------------------------------------------------------------
@@ -69,28 +75,12 @@ def _path_to_link_target(path: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def check_broken_wikilinks(cli) -> list[ReviewFinding]:
-    """Find [[wikilinks]] that do not resolve to any file in the vault.
-
-    A link resolves if its target (case-insensitively) matches the stem of
-    any file currently in the vault.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        List of ReviewFinding with severity WARNING for each broken link.
-    """
-    all_files = cli.list_files()
-    # Build a set of known stems (lower-cased) for O(1) lookup
-    known_stems = {_stem(f).lower() for f in all_files}
+def check_broken_wikilinks(snapshot: VaultSnapshot) -> list[ReviewFinding]:
+    """Find [[wikilinks]] that do not resolve to any file in the vault."""
+    known_stems = {_stem(f).lower() for f in snapshot}
 
     findings: list[ReviewFinding] = []
-    for path in all_files:
-        try:
-            content = cli.read(path)
-        except Exception:
-            continue
+    for path, content in snapshot.items():
         for target in _extract_wikilinks(content):
             if target.lower() not in known_stems:
                 findings.append(
@@ -109,31 +99,12 @@ def check_broken_wikilinks(cli) -> list[ReviewFinding]:
 # ---------------------------------------------------------------------------
 
 
-def check_missing_fields(cli) -> list[ReviewFinding]:
-    """Check entity and session notes for missing Description/Summary sections.
-
-    Inspects NPCs, Locations, Factions, and Sessions folders. A note is
-    flagged when none of its ``## Heading`` lines match the required section
-    for that folder type.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        List of ReviewFinding with severity WARNING for each missing section.
-    """
+def check_missing_fields(snapshot: VaultSnapshot) -> list[ReviewFinding]:
+    """Check entity and session notes for missing Description/Summary sections."""
     findings: list[ReviewFinding] = []
 
     for folder, required_sections in _REQUIRED_SECTIONS.items():
-        notes = cli.find_notes_in_folder(folder)
-        for path in notes:
-            # Only check notes that actually belong to this folder
-            if not path.startswith(folder):
-                continue
-            try:
-                content = cli.read(path)
-            except Exception:
-                continue
+        for path, content in _notes_in_folder(snapshot, folder).items():
             headings = {
                 m.group(1).strip().lower()
                 for m in re.finditer(r"^##\s+(.+)$", content, re.MULTILINE)
@@ -145,9 +116,7 @@ def check_missing_fields(cli) -> list[ReviewFinding]:
                             check="missing_fields",
                             severity=Severity.WARNING,
                             file=path,
-                            detail=(
-                                f"Missing '{section}' section in {_stem(path)}"
-                            ),
+                            detail=f"Missing '{section}' section in {_stem(path)}",
                         )
                     )
     return findings
@@ -158,27 +127,16 @@ def check_missing_fields(cli) -> list[ReviewFinding]:
 # ---------------------------------------------------------------------------
 
 
-def check_duplicate_entities(cli, folder: str) -> list[ReviewFinding]:
-    """Fuzzy-match filenames within *folder* to surface near-duplicates.
-
-    Each filename stem is compared against all previously-seen stems using
-    ``find_match``.  A pair is only reported once.
-
-    Args:
-        cli: An ObsidianCLI instance.
-        folder: Vault folder to inspect (e.g. ``"NPCs/"``).
-
-    Returns:
-        List of ReviewFinding with severity WARNING for each suspected pair.
-    """
-    notes = cli.find_notes_in_folder(folder)
+def check_duplicate_entities(snapshot: VaultSnapshot, folder: str) -> list[ReviewFinding]:
+    """Fuzzy-match filenames within *folder* to surface near-duplicates."""
+    notes = list(_notes_in_folder(snapshot, folder).keys())
     stems = [_stem(p) for p in notes]
 
     findings: list[ReviewFinding] = []
     reported: set[frozenset[str]] = set()
 
     for i, stem in enumerate(stems):
-        candidates = stems[:i]  # only previously-seen stems
+        candidates = stems[:i]
         if not candidates:
             continue
         match = find_match(stem, candidates, threshold=80)
@@ -202,37 +160,20 @@ def check_duplicate_entities(cli, folder: str) -> list[ReviewFinding]:
 # ---------------------------------------------------------------------------
 
 
-def check_orphaned_notes(cli) -> list[ReviewFinding]:
-    """Find entity notes that are not linked from any other note.
-
-    Collects all notes in the entity folders, then scans every note in the
-    vault for wikilinks.  Any entity whose stem never appears as a link target
-    is considered orphaned.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        List of ReviewFinding with severity INFO for each orphaned note.
-    """
-    # Gather entity notes
-    entity_notes: list[str] = []
+def check_orphaned_notes(snapshot: VaultSnapshot) -> list[ReviewFinding]:
+    """Find entity notes that are not linked from any other note."""
+    entity_notes: dict[str, str] = {}
     for folder in _ENTITY_FOLDERS:
-        entity_notes.extend(cli.find_notes_in_folder(folder))
+        entity_notes.update(_notes_in_folder(snapshot, folder))
 
     if not entity_notes:
         return []
 
     entity_stems = {_stem(p).lower(): p for p in entity_notes}
 
-    # Collect all link targets from every note in the vault
-    all_files = cli.list_files()
+    # Collect all link targets from every note
     referenced: set[str] = set()
-    for path in all_files:
-        try:
-            content = cli.read(path)
-        except Exception:
-            continue
+    for content in snapshot.values():
         for target in _extract_wikilinks(content):
             referenced.add(target.lower())
 
@@ -255,19 +196,9 @@ def check_orphaned_notes(cli) -> list[ReviewFinding]:
 # ---------------------------------------------------------------------------
 
 
-def check_timeline_gaps(cli) -> list[ReviewFinding]:
-    """Find gaps in session numbering within the Sessions folder.
-
-    Extracts the integer suffix from each session filename (e.g.
-    ``Session-003.md`` → 3) and reports any missing numbers in the sequence.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        List of ReviewFinding with severity WARNING for each gap.
-    """
-    session_notes = cli.find_notes_in_folder("Sessions/")
+def check_timeline_gaps(snapshot: VaultSnapshot) -> list[ReviewFinding]:
+    """Find gaps in session numbering within the Sessions folder."""
+    session_notes = _notes_in_folder(snapshot, "Sessions/")
     numbers: list[int] = []
     for path in session_notes:
         m = re.search(r"(\d+)", _stem(path))
@@ -293,41 +224,18 @@ def check_timeline_gaps(cli) -> list[ReviewFinding]:
 
 
 # ---------------------------------------------------------------------------
-# Check 6: inconsistencies (NPC affiliations reference missing factions)
+# Check 6: inconsistencies
 # ---------------------------------------------------------------------------
 
 
-def check_inconsistencies(cli) -> list[ReviewFinding]:
-    """Check that NPC affiliation wikilinks resolve to real faction notes.
+def check_inconsistencies(snapshot: VaultSnapshot) -> list[ReviewFinding]:
+    """Check that NPC affiliation wikilinks resolve to real faction notes."""
+    npc_notes = _notes_in_folder(snapshot, "NPCs/")
+    faction_stems = {_stem(p).lower() for p in _notes_in_folder(snapshot, "Factions/")}
 
-    Reads every NPC note and looks for affiliation patterns
-    (``**Affiliations:**`` or ``Affiliation:`` lines).  Any wikilink target
-    on those lines that does not match a file in the Factions folder is
-    flagged.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        List of ReviewFinding with severity WARNING for each missing faction.
-    """
-    npc_notes = cli.find_notes_in_folder("NPCs/")
-    faction_notes = cli.find_notes_in_folder("Factions/")
-    faction_stems = {_stem(p).lower() for p in faction_notes}
-
-    # Also build a set of ALL vault file stems for broader resolution
     findings: list[ReviewFinding] = []
 
-    _affiliation_line_re = re.compile(
-        r"(?i)(affiliation[s]?\s*[:*]+|^\s*affiliation[s]?\s*:)", re.MULTILINE
-    )
-
-    for path in npc_notes:
-        try:
-            content = cli.read(path)
-        except Exception:
-            continue
-
+    for path, content in npc_notes.items():
         for line in content.splitlines():
             if re.search(r"(?i)affiliation", line):
                 for target in _extract_wikilinks(line):
@@ -337,10 +245,7 @@ def check_inconsistencies(cli) -> list[ReviewFinding]:
                                 check="inconsistencies",
                                 severity=Severity.WARNING,
                                 file=path,
-                                detail=(
-                                    f"NPC '{_stem(path)}' references unknown faction: "
-                                    f"[[{target}]]"
-                                ),
+                                detail=f"NPC '{_stem(path)}' references unknown faction: [[{target}]]",
                             )
                         )
     return findings

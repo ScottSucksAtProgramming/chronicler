@@ -1,7 +1,7 @@
 """Vault review orchestrator.
 
-Runs all quality checks against a vault and returns a consolidated
-ReviewReport with aggregated findings.
+Loads all notes once via ObsidianCLI.read_all_notes() and passes the
+snapshot to each quality check — avoiding per-check CLI subprocess calls.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from session_scribe.reviewer.checks import (
     ReviewFinding,
     Severity,
+    VaultSnapshot,
     check_broken_wikilinks,
     check_duplicate_entities,
     check_inconsistencies,
@@ -22,7 +23,6 @@ from session_scribe.reviewer.checks import (
 
 logger = logging.getLogger(__name__)
 
-# Entity folders that get individual duplicate-entity checks
 _DUPLICATE_FOLDERS = ("NPCs/", "Locations/", "Factions/")
 
 
@@ -50,11 +50,10 @@ class ReviewReport:
 
 
 def _run_check(name: str, fn, *args) -> list[ReviewFinding]:
-    """Run a single check function, catching any exception and returning an
-    ERROR finding in its place so the rest of the review can continue."""
+    """Run a single check, converting exceptions to ERROR findings."""
     try:
         return fn(*args)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Check '%s' raised an exception: %s", name, exc)
         return [
             ReviewFinding(
@@ -69,35 +68,41 @@ def _run_check(name: str, fn, *args) -> list[ReviewFinding]:
 def review_vault(cli) -> ReviewReport:
     """Run all quality checks against the vault and return a ReviewReport.
 
-    Each check is isolated — if one raises an exception the others still run.
-
-    Args:
-        cli: An ObsidianCLI instance.
-
-    Returns:
-        A ReviewReport containing all findings from every check.
+    Loads all notes once via cli.read_all_notes() for performance,
+    then passes the snapshot to each check function.
     """
     all_findings: list[ReviewFinding] = []
 
-    # Core checks (single-argument)
-    all_findings.extend(_run_check("broken_wikilinks", check_broken_wikilinks, cli))
-    all_findings.extend(_run_check("missing_fields", check_missing_fields, cli))
-    all_findings.extend(_run_check("orphaned_notes", check_orphaned_notes, cli))
-    all_findings.extend(_run_check("timeline_gaps", check_timeline_gaps, cli))
-    all_findings.extend(_run_check("inconsistencies", check_inconsistencies, cli))
+    # Load all notes once (filesystem bulk read — fast)
+    try:
+        snapshot: VaultSnapshot = cli.read_all_notes()
+        logger.info("Loaded %d notes for review", len(snapshot))
+    except Exception as exc:
+        logger.error("Failed to load vault notes: %s", exc)
+        return ReviewReport(findings=[
+            ReviewFinding(
+                check="load_vault",
+                severity=Severity.ERROR,
+                file="",
+                detail=f"Failed to load vault: {exc}",
+            )
+        ])
 
-    # Duplicate-entity checks per folder
+    # Run all checks against the snapshot
+    all_findings.extend(_run_check("broken_wikilinks", check_broken_wikilinks, snapshot))
+    all_findings.extend(_run_check("missing_fields", check_missing_fields, snapshot))
+    all_findings.extend(_run_check("orphaned_notes", check_orphaned_notes, snapshot))
+    all_findings.extend(_run_check("timeline_gaps", check_timeline_gaps, snapshot))
+    all_findings.extend(_run_check("inconsistencies", check_inconsistencies, snapshot))
+
     for folder in _DUPLICATE_FOLDERS:
         all_findings.extend(
-            _run_check("duplicate_entities", check_duplicate_entities, cli, folder)
+            _run_check("duplicate_entities", check_duplicate_entities, snapshot, folder)
         )
 
     report = ReviewReport(findings=all_findings)
     logger.info(
         "Vault review complete: %d findings (%d errors, %d warnings, %d info)",
-        report.total_findings,
-        report.error_count,
-        report.warning_count,
-        report.info_count,
+        report.total_findings, report.error_count, report.warning_count, report.info_count,
     )
     return report

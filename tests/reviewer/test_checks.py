@@ -1,7 +1,6 @@
 """Tests for individual vault quality checks."""
 
 import pytest
-from unittest.mock import MagicMock
 
 from session_scribe.reviewer.checks import (
     check_broken_wikilinks,
@@ -12,16 +11,8 @@ from session_scribe.reviewer.checks import (
     check_inconsistencies,
     ReviewFinding,
     Severity,
+    VaultSnapshot,
 )
-
-
-@pytest.fixture
-def mock_cli():
-    cli = MagicMock()
-    cli.vault_name = "Test Vault"
-    cli.list_files.return_value = []
-    cli.find_notes_in_folder.return_value = []
-    return cli
 
 
 class TestReviewFinding:
@@ -37,119 +28,143 @@ class TestReviewFinding:
 
 
 class TestCheckBrokenWikilinks:
-    def test_finds_broken_link(self, mock_cli):
-        mock_cli.list_files.return_value = [
-            "NPCs/Theron.md",
-            "Sessions/Session-001.md",
-        ]
-        mock_cli.read.side_effect = lambda path: {
+    def test_finds_broken_link(self):
+        snapshot: VaultSnapshot = {
             "NPCs/Theron.md": "# Theron\n\nAffiliated with [[Nonexistent Faction]]",
             "Sessions/Session-001.md": "# Session 1\n\nMet [[Theron]]",
-        }[path]
-
-        findings = check_broken_wikilinks(mock_cli)
+        }
+        findings = check_broken_wikilinks(snapshot)
         broken = [f for f in findings if "Nonexistent Faction" in f.detail]
         assert len(broken) >= 1
         assert broken[0].severity == Severity.WARNING
 
-    def test_no_broken_links(self, mock_cli):
-        mock_cli.list_files.return_value = ["NPCs/Theron.md"]
-        mock_cli.read.return_value = "# Theron\n\nA ranger."
-        findings = check_broken_wikilinks(mock_cli)
+    def test_no_broken_links(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": "# Theron\n\nA ranger.",
+        }
+        findings = check_broken_wikilinks(snapshot)
+        assert findings == []
+
+    def test_valid_link_resolves(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": "# Theron\n\nSee [[Sylvie]].",
+            "NPCs/Sylvie.md": "# Sylvie\n\nA leader.",
+        }
+        findings = check_broken_wikilinks(snapshot)
         assert findings == []
 
 
 class TestCheckMissingFields:
-    def test_npc_missing_description(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = ["NPCs/Theron.md"]
-        mock_cli.read.return_value = (
-            "---\ntype: npc\nstatus: alive\nfirst_appeared: Session-001\n---\n"
-            "# Theron\n"
-        )
-        findings = check_missing_fields(mock_cli)
+    def test_npc_missing_description(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": "---\ntype: npc\n---\n# Theron\n",
+        }
+        findings = check_missing_fields(snapshot)
         assert any("description" in f.detail.lower() for f in findings)
 
-    def test_complete_npc_no_findings(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = ["NPCs/Theron.md"]
-        mock_cli.read.return_value = (
-            "---\ntype: npc\nstatus: alive\nfirst_appeared: Session-001\n---\n"
-            "# Theron\n\n## Description\n\nA ranger from the north.\n"
-        )
-        findings = check_missing_fields(mock_cli)
+    def test_complete_npc_no_findings(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": (
+                "---\ntype: npc\n---\n# Theron\n\n"
+                "## Description\n\nA ranger from the north.\n"
+            ),
+        }
+        findings = check_missing_fields(snapshot)
         npc_findings = [f for f in findings if "Theron" in f.detail]
         assert npc_findings == []
 
+    def test_session_missing_summary(self):
+        snapshot: VaultSnapshot = {
+            "Sessions/Session-001.md": "---\ntype: session\n---\n# Session 1\n",
+        }
+        findings = check_missing_fields(snapshot)
+        assert any("summary" in f.detail.lower() for f in findings)
+
 
 class TestCheckDuplicateEntities:
-    def test_finds_near_duplicate_npcs(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = [
-            "NPCs/Sylvie.md",
-            "NPCs/Sylvie Starwater.md",
-        ]
-        findings = check_duplicate_entities(mock_cli, "NPCs/")
+    def test_finds_near_duplicate_npcs(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Sylvie.md": "# Sylvie",
+            "NPCs/Sylvie Starwater.md": "# Sylvie Starwater",
+        }
+        findings = check_duplicate_entities(snapshot, "NPCs/")
         assert len(findings) >= 1
         assert findings[0].severity == Severity.WARNING
 
-    def test_no_duplicates(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = [
-            "NPCs/Theron.md",
-            "NPCs/Sylvie.md",
-        ]
-        findings = check_duplicate_entities(mock_cli, "NPCs/")
+    def test_no_duplicates(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": "# Theron",
+            "NPCs/Sylvie.md": "# Sylvie",
+        }
+        findings = check_duplicate_entities(snapshot, "NPCs/")
         assert findings == []
 
 
 class TestCheckOrphanedNotes:
-    def test_finds_orphaned_npc(self, mock_cli):
-        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
-            "NPCs/": ["NPCs/Orphan.md"],
-            "Locations/": [],
-            "Factions/": [],
-            "Loot/": [],
-        }.get(folder, [])
-        mock_cli.list_files.return_value = [
-            "NPCs/Orphan.md",
-            "Sessions/Session-001.md",
-        ]
-        mock_cli.read.side_effect = lambda path: {
+    def test_finds_orphaned_npc(self):
+        snapshot: VaultSnapshot = {
             "NPCs/Orphan.md": "# Orphan\n\nNobody links here.",
             "Sessions/Session-001.md": "# Session 1\n\nMet [[Theron]].",
-        }[path]
-
-        findings = check_orphaned_notes(mock_cli)
+        }
+        findings = check_orphaned_notes(snapshot)
         assert any("Orphan" in f.detail for f in findings)
+
+    def test_linked_note_not_orphaned(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": "# Theron",
+            "Sessions/Session-001.md": "# Session 1\n\nMet [[Theron]].",
+        }
+        findings = check_orphaned_notes(snapshot)
+        theron_findings = [f for f in findings if "Theron" in f.detail]
+        assert theron_findings == []
 
 
 class TestCheckTimelineGaps:
-    def test_finds_gap(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = [
-            "Sessions/Session-001.md",
-            "Sessions/Session-002.md",
-            "Sessions/Session-005.md",
-        ]
-        findings = check_timeline_gaps(mock_cli)
+    def test_finds_gap(self):
+        snapshot: VaultSnapshot = {
+            "Sessions/Session-001.md": "",
+            "Sessions/Session-002.md": "",
+            "Sessions/Session-005.md": "",
+        }
+        findings = check_timeline_gaps(snapshot)
         assert len(findings) >= 1
-        assert "3" in findings[0].detail or "missing" in findings[0].detail.lower()
+        assert any("003" in f.detail for f in findings)
 
-    def test_no_gap(self, mock_cli):
-        mock_cli.find_notes_in_folder.return_value = [
-            "Sessions/Session-001.md",
-            "Sessions/Session-002.md",
-            "Sessions/Session-003.md",
-        ]
-        findings = check_timeline_gaps(mock_cli)
+    def test_no_gap(self):
+        snapshot: VaultSnapshot = {
+            "Sessions/Session-001.md": "",
+            "Sessions/Session-002.md": "",
+            "Sessions/Session-003.md": "",
+        }
+        findings = check_timeline_gaps(snapshot)
+        assert findings == []
+
+    def test_single_session_no_findings(self):
+        snapshot: VaultSnapshot = {
+            "Sessions/Session-022.md": "",
+        }
+        findings = check_timeline_gaps(snapshot)
         assert findings == []
 
 
 class TestCheckInconsistencies:
-    def test_finds_orphaned_affiliation(self, mock_cli):
-        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
-            "NPCs/": ["NPCs/Theron.md"],
-            "Factions/": [],
-        }.get(folder, [])
-        mock_cli.read.return_value = (
-            "---\ntype: npc\n---\n# Theron\n\n"
-            "**Affiliations:** [[Missing Faction]]"
-        )
-        findings = check_inconsistencies(mock_cli)
+    def test_finds_orphaned_affiliation(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": (
+                "---\ntype: npc\n---\n# Theron\n\n"
+                "**Affiliations:** [[Missing Faction]]"
+            ),
+        }
+        findings = check_inconsistencies(snapshot)
         assert any("Missing Faction" in f.detail for f in findings)
+
+    def test_valid_affiliation_no_finding(self):
+        snapshot: VaultSnapshot = {
+            "NPCs/Theron.md": (
+                "---\ntype: npc\n---\n# Theron\n\n"
+                "**Affiliations:** [[The Cult]]"
+            ),
+            "Factions/The Cult.md": "# The Cult",
+        }
+        findings = check_inconsistencies(snapshot)
+        assert findings == []

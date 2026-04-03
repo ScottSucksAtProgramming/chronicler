@@ -10,8 +10,7 @@ from session_scribe.reviewer.checks import ReviewFinding, Severity
 class TestReviewVault:
     def test_review_produces_report(self):
         mock_cli = MagicMock()
-        mock_cli.list_files.return_value = []
-        mock_cli.find_notes_in_folder.return_value = []
+        mock_cli.read_all_notes.return_value = {}
 
         report = review_vault(mock_cli)
 
@@ -21,12 +20,9 @@ class TestReviewVault:
 
     def test_review_aggregates_findings(self):
         mock_cli = MagicMock()
-        mock_cli.list_files.return_value = ["NPCs/Test.md"]
-        mock_cli.find_notes_in_folder.return_value = ["NPCs/Test.md"]
-        mock_cli.read.return_value = (
-            "---\ntype: npc\n---\n# Test\n\n"
-            "Linked to [[Nonexistent]]"
-        )
+        mock_cli.read_all_notes.return_value = {
+            "NPCs/Test.md": "---\ntype: npc\n---\n# Test\n\nLinked to [[Nonexistent]]",
+        }
 
         report = review_vault(mock_cli)
         assert report.total_findings > 0
@@ -45,12 +41,11 @@ class TestReviewVault:
         assert report.warning_count == 1
         assert report.info_count == 1
 
-    def test_review_continues_on_check_failure(self):
-        """If one check raises, others should still run."""
+    def test_review_handles_load_failure(self):
+        """If read_all_notes fails, return an error report."""
         mock_cli = MagicMock()
-        mock_cli.list_files.side_effect = Exception("CLI down")
-        mock_cli.find_notes_in_folder.return_value = []
+        mock_cli.read_all_notes.side_effect = Exception("CLI down")
 
         report = review_vault(mock_cli)
-        # Should have error findings for the failed checks, not crash
         assert any(f.severity == Severity.ERROR for f in report.findings)
+        assert any("load" in f.detail.lower() for f in report.findings)

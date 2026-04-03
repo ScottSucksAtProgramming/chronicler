@@ -47,7 +47,7 @@ class ObsidianCLI:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _run(self, args: str, timeout: int = 30) -> str:
+    def _run(self, args: str, timeout: int = 120) -> str:
         """Execute a CLI command and return stdout.
 
         Args:
@@ -265,6 +265,33 @@ class ObsidianCLI:
         """
         all_files = self.list_files()
         return [f for f in all_files if f.startswith(folder)]
+
+    def read_all_notes(self) -> dict[str, str]:
+        """Read all notes in the vault via filesystem (fast bulk read).
+
+        Returns a dict mapping relative path → content.
+        Falls back to per-file CLI reads if vault path is unavailable.
+        """
+        vault_path = self._get_vault_path()
+        if vault_path:
+            result: dict[str, str] = {}
+            vault = Path(vault_path)
+            for md_file in vault.rglob("*.md"):
+                rel_path = str(md_file.relative_to(vault))
+                try:
+                    result[rel_path] = md_file.read_text(encoding="utf-8")
+                except Exception:
+                    continue
+            return result
+
+        # Fallback: CLI per-file (slow)
+        result = {}
+        for path in self.list_files():
+            try:
+                result[path] = self.read(path)
+            except Exception:
+                continue
+        return result
 
     def health_check(self) -> bool:
         """Return True if the CLI binary is reachable, False otherwise."""

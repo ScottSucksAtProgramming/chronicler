@@ -9,6 +9,7 @@ from session_scribe.models.entities import (
     NPC,
     PlotThread,
 )
+from session_scribe.models.context import PlayerCharacter
 from session_scribe.models.session import SessionRecap
 
 
@@ -51,6 +52,32 @@ def _frontmatter(**fields: object) -> str:
 # ---------------------------------------------------------------------------
 # NPC
 # ---------------------------------------------------------------------------
+
+
+def render_pc_note(pc: PlayerCharacter) -> str:
+    """Render a Player Character note."""
+    frontmatter_lines = [
+        "---",
+        "type: player-character",
+        f"player_name: {pc.player_name}",
+        f"character_name: {pc.character_name}",
+    ]
+    if pc.character_class:
+        frontmatter_lines.append(f"character_class: {pc.character_class}")
+    frontmatter_lines.append("---")
+    fm = "\n".join(frontmatter_lines)
+
+    body_lines = [
+        f"# {pc.character_name}",
+        "",
+        f"**Player:** {pc.player_name}",
+    ]
+    if pc.character_class:
+        body_lines.append(f"**Class:** {pc.character_class}")
+    body_lines += ["", "## Notes", ""]
+
+    body = "\n".join(body_lines)
+    return f"{fm}\n{body}\n"
 
 
 def render_npc_note(npc: NPC) -> str:

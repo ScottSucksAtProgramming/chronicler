@@ -32,6 +32,7 @@ from session_scribe.vault.note_renderer import (
     render_location_note,
     render_loot_note,
     render_npc_note,
+    render_pc_note,
     render_open_threads,
     render_session_note,
 )
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
 
 _FOLDERS = [
     "Sessions",
+    "Party",
     "NPCs",
     "Locations",
     "Factions",
@@ -158,6 +160,15 @@ class VaultManager:
         path = f"Sessions/{session_id}.md"
         self.cli.create(path, render_session_note(recap, npcs, locations))
 
+    def write_pc(self, pc: PlayerCharacter) -> None:
+        """Create a Player Character note in ``Party/``."""
+        path = f"Party/{pc.character_name}.md"
+        self.cli.create(path, render_pc_note(pc))
+
+    def remove_pc(self, character_name: str) -> None:
+        """Remove a Player Character note from ``Party/``."""
+        self.cli.delete(f"Party/{character_name}.md")
+
     # ------------------------------------------------------------------
     # Orchestrated write
     # ------------------------------------------------------------------
@@ -225,7 +236,7 @@ class VaultManager:
         active_threads = self._read_active_threads()
         recent_events = self._read_recent_events(session_number)
         entity_aliases = self._read_entity_aliases()
-        player_characters = self._read_player_characters()
+        player_characters = self.read_player_characters()
 
         return ContextBundle(
             session_number=session_number,
@@ -303,6 +314,37 @@ class VaultManager:
         self.cli.create(
             "_Agent/Memory/player-characters.md", "\n".join(lines) + "\n"
         )
+
+    def read_player_characters(self) -> list[PlayerCharacter]:
+        """Read player characters from ``Party/``, falling back to agent memory."""
+        pcs: list[PlayerCharacter] = []
+        for path in self.cli.find_notes_in_folder("Party/"):
+            try:
+                content = self.cli.read(path)
+            except Exception:
+                continue
+
+            fm = self._parse_frontmatter(content)
+            if fm.get("type") != "player-character":
+                continue
+
+            player_name = fm.get("player_name")
+            character_name = fm.get("character_name")
+            if not player_name or not character_name:
+                continue
+
+            pcs.append(
+                PlayerCharacter(
+                    player_name=player_name,
+                    character_name=character_name,
+                    character_class=fm.get("character_class"),
+                )
+            )
+
+        if pcs:
+            return pcs
+
+        return self._read_player_characters()
 
     # ------------------------------------------------------------------
     # Frontmatter parsing

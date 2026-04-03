@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import shlex
+from typing import TYPE_CHECKING
+
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -11,6 +14,9 @@ from session_scribe.chat.prompts import build_chat_prompt
 from session_scribe.gateway.llm_gateway import LLMGateway
 from session_scribe.gateway.types import LLMRequest
 from session_scribe.retrieval.retrieval import RetrievalLayer, SearchResult
+
+if TYPE_CHECKING:
+    from session_scribe.vault.vault_manager import VaultManager
 
 
 class ChatApp(App):
@@ -48,11 +54,13 @@ class ChatApp(App):
         retrieval: RetrievalLayer,
         gateway: LLMGateway,
         model: str,
+        vault_manager: "VaultManager | None" = None,
     ) -> None:
         super().__init__()
         self.retrieval = retrieval
         self.gateway = gateway
         self.model = model
+        self.vault_manager = vault_manager
         self.conversation_history: list[dict[str, str]] = []
 
     def compose(self) -> ComposeResult:
@@ -82,8 +90,58 @@ class ChatApp(App):
             self.exit()
             return
 
+        if query.startswith("/"):
+            self._handle_command(query)
+            return
+
         self._add_message(f"You: {query}", "user-msg")
         self._run_query(query)
+
+    def _handle_command(self, query: str) -> None:
+        """Handle chat slash commands."""
+        try:
+            parts = shlex.split(query)
+        except ValueError as exc:
+            self._add_message(f"Error: {exc}", "error-msg")
+            return
+
+        command = parts[0].lower()
+
+        if command == "/help":
+            self._add_message(
+                "Available commands: /help, /alias \"alias\" \"entity\", /quit",
+                "assistant-msg",
+            )
+            return
+
+        if command == "/alias":
+            if self.vault_manager is None:
+                self._add_message(
+                    "Alias updates require a configured vault manager.",
+                    "error-msg",
+                )
+                return
+            if len(parts) != 3:
+                self._add_message(
+                    'Usage: /alias "alias" "entity"',
+                    "error-msg",
+                )
+                return
+
+            alias_term, entity_name = parts[1], parts[2]
+            aliases = dict(self.vault_manager.read_agent_memory().entity_aliases)
+            aliases[entity_name] = alias_term
+            self.vault_manager.update_entity_aliases(aliases)
+            self._add_message(
+                f'Alias saved: "{alias_term}" -> "{entity_name}"',
+                "assistant-msg",
+            )
+            return
+
+        self._add_message(
+            "Unknown command. Type /help for available commands.",
+            "error-msg",
+        )
 
     @work(thread=True)
     def _run_query(self, query: str) -> None:

@@ -11,7 +11,10 @@ import typer
 from rich.console import Console
 
 from session_scribe.config.settings import Settings
+from session_scribe.models.context import PlayerCharacter
+from session_scribe.models.extraction import ExtractionResult
 from session_scribe.reviewer import review_vault
+from session_scribe.vault.metrics import QualityMetrics, SessionMetric
 from session_scribe.vault.obsidian_cli import ObsidianCLI
 from session_scribe.vault.vault_manager import VaultManager
 
@@ -20,6 +23,8 @@ app = typer.Typer(
     help="D&D Session Scribe — AI-powered campaign note management.",
     no_args_is_help=True,
 )
+party_app = typer.Typer(help="Manage player characters.")
+app.add_typer(party_app, name="party")
 console = Console()
 
 
@@ -31,6 +36,67 @@ def version_callback(value: bool) -> None:
     if value:
         console.print("session-scribe v0.1.0")
         raise typer.Exit()
+
+
+def _load_vault_manager() -> VaultManager:
+    """Create a vault manager from the current settings."""
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    if not settings.vault_name:
+        console.print("[red]Error: SCRIBE_VAULT_NAME is not set.[/red]")
+        raise typer.Exit(1)
+
+    cli = ObsidianCLI(settings.vault_name)
+    return VaultManager(cli)
+
+
+def _metrics_path(settings: Settings) -> Path:
+    """Return the metrics storage path inside the configured vault."""
+    return settings.vault_path / ".scribe" / "metrics.json"
+
+
+def _record_session_metric(
+    settings: Settings,
+    cli: ObsidianCLI,
+    result: ExtractionResult,
+) -> None:
+    """Persist quality metrics for a processed session."""
+    report = review_vault(cli)
+    metrics = QualityMetrics(_metrics_path(settings))
+    metrics.add(
+        SessionMetric(
+            session_number=result.session_number,
+            npc_count=len(result.npcs),
+            location_count=len(result.locations),
+            faction_count=len(result.factions),
+            thread_count=len(result.plot_threads),
+            question_count=len(result.questions),
+            quality_score=result.quality_score.average if result.quality_score else 0.0,
+            reviewer_findings=report.total_findings,
+        )
+    )
+
+
+async def _auto_reindex_vault(settings: Settings, cli: ObsidianCLI) -> int | None:
+    """Reindex the vault after ingest when embeddings are available."""
+    from session_scribe.retrieval.embeddings import EmbeddingClient
+    from session_scribe.retrieval.indexer import VaultIndexer
+    import chromadb
+
+    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+    if not embed_client.health_check():
+        return None
+
+    chroma_client = chromadb.PersistentClient(
+        path=str(settings.vault_path / ".scribe" / "chromadb")
+    )
+    collection = chroma_client.get_or_create_collection("vault_notes")
+    indexer = VaultIndexer(cli, embed_client, collection)
+    return await indexer.index_vault(vault_path=str(settings.vault_path))
 
 
 @app.callback()
@@ -129,6 +195,7 @@ async def _run_ingest_pipeline(
             try:
                 console.print("[cyan]Writing notes to vault...[/cyan]")
                 vault_manager.write_extraction_result(result)
+                _record_session_metric(settings, cli, result)
                 total = (
                     len(result.npcs)
                     + len(result.locations)
@@ -139,6 +206,17 @@ async def _run_ingest_pipeline(
                 console.print(
                     f"[green]Notes written to vault:[/green] {total} notes created/updated"
                 )
+
+                console.print("[cyan]Updating search index...[/cyan]")
+                chunk_count = await _auto_reindex_vault(settings, cli)
+                if chunk_count is None:
+                    console.print(
+                        "[dim]LM Studio not running — skipping search index update[/dim]"
+                    )
+                else:
+                    console.print(
+                        f"[green]Search index updated:[/green] {chunk_count} chunks"
+                    )
             except Exception as exc:
                 console.print(
                     f"[yellow]Warning: Could not write to vault: {exc}[/yellow]"
@@ -256,6 +334,55 @@ def init() -> None:
     console.print("\nYou're ready to run [bold]scribe ingest[/bold].")
 
 
+@party_app.command("list")
+def party_list() -> None:
+    """List configured player characters."""
+    vault_manager = _load_vault_manager()
+    pcs = vault_manager.read_player_characters()
+
+    if not pcs:
+        console.print("No player characters configured yet.")
+        return
+
+    console.print("[bold]Player Characters[/bold]")
+    for pc in pcs:
+        details = f"{pc.player_name} -> {pc.character_name}"
+        if pc.character_class:
+            details += f" ({pc.character_class})"
+        console.print(details)
+
+
+@party_app.command("add")
+def party_add(
+    player: Annotated[str, typer.Option("--player", help="Player name.")],
+    character: Annotated[str, typer.Option("--character", help="Character name.")],
+    character_class: Annotated[
+        Optional[str],
+        typer.Option("--class", help="Character class."),
+    ] = None,
+) -> None:
+    """Add a player character note to the party."""
+    vault_manager = _load_vault_manager()
+    vault_manager.write_pc(
+        PlayerCharacter(
+            player_name=player,
+            character_name=character,
+            character_class=character_class,
+        )
+    )
+    console.print(f"[green]Added player character:[/green] {character}")
+
+
+@party_app.command("remove")
+def party_remove(
+    character: Annotated[str, typer.Option("--character", help="Character name.")],
+) -> None:
+    """Remove a player character note from the party."""
+    vault_manager = _load_vault_manager()
+    vault_manager.remove_pc(character)
+    console.print(f"[green]Removed player character:[/green] {character}")
+
+
 @app.command()
 def chat() -> None:
     """Open interactive campaign Q&A chat."""
@@ -304,6 +431,8 @@ def chat() -> None:
 
     layer = RetrievalLayer(collection, embed_client)
     gateway = LLMGateway(settings)
+    cli = ObsidianCLI(settings.vault_name)
+    vault_manager = VaultManager(cli)
 
     model = (
         settings.kimi_model or "kimi-default"
@@ -311,7 +440,12 @@ def chat() -> None:
         else settings.nanogpt_model
     )
 
-    ChatApp(retrieval=layer, gateway=gateway, model=model).run()
+    ChatApp(
+        retrieval=layer,
+        gateway=gateway,
+        model=model,
+        vault_manager=vault_manager,
+    ).run()
 
     asyncio.run(gateway.close())
     asyncio.run(embed_client.close())
@@ -545,6 +679,24 @@ def config() -> None:
 
 @app.command()
 def stats() -> None:
-    """Show LLM usage statistics and cost tracking."""
+    """Show session quality metrics and extraction trends."""
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print("[bold]Session Scribe Stats[/bold]")
+        console.print("No quality metrics yet.")
+        return
+
     console.print("[bold]Session Scribe Stats[/bold]")
-    console.print("No usage data yet.")
+    metrics = QualityMetrics(_metrics_path(settings))
+    summary = metrics.summary()
+
+    if summary["sessions_processed"] == 0:
+        console.print("No quality metrics yet.")
+        return
+
+    console.print(f"Sessions processed: {summary['sessions_processed']}")
+    console.print(f"Average quality:    {summary['avg_quality']:.2f}")
+    console.print(f"Total NPCs:         {summary['total_npcs']}")
+    console.print(f"Total locations:    {summary['total_locations']}")
+    console.print(f"Findings trend:     {summary['findings_trend']}")

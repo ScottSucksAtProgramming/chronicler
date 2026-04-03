@@ -13,6 +13,79 @@ def _build_cli(snapshot: dict[str, str]) -> MagicMock:
 
 
 class TestImproveVault:
+    def test_improve_backfills_location_parent_from_explicit_description(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n"
+            ),
+            "Locations/Mist Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Mist Alley\n"
+                "connected_to: [Laguna Nera]\n"
+                "---\n"
+                "# Mist Alley\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera containing the Perfumed Chapel.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.changed_count >= 1
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Mist Alley.md"
+        ][-1]
+        assert 'parent_location: "[[Laguna Nera]]"' in updated
+        assert "**Contained In:** [[Laguna Nera]]" in updated
+
+    def test_improve_rebuilds_parent_contains_links_from_existing_locations(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n"
+            ),
+            "Locations/Mist Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Mist Alley\n"
+                "connected_to: [Laguna Nera]\n"
+                "---\n"
+                "# Mist Alley\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera.\n"
+            ),
+            "Locations/Floating Market.md": (
+                "---\n"
+                "type: location\n"
+                "name: Floating Market\n"
+                "---\n"
+                "# Floating Market\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera featuring markets on the water.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Laguna Nera.md"
+        ][-1]
+        assert "**Contains:** [[Floating Market]], [[Mist Alley]]" in updated
+
     def test_improve_links_body_mentions_from_canonical_note_names(self):
         snapshot = {
             "NPCs/Salty McKeel.md": (

@@ -32,11 +32,13 @@ _REFERENCE_SCALAR_KEYS = {
     "found_in",
     "held_by",
     "introduced_in",
+    "parent_location",
     "resolved_in",
 }
 
 _REFERENCE_LIST_KEYS = {
     "affiliations",
+    "adjacent_to",
     "connected_to",
     "known_members",
     "related_entities",
@@ -115,7 +117,137 @@ def improve_vault(cli) -> ImproveReport:
                 report.changed_files.append(path)
             updated_snapshot[path] = updated
 
+    location_updates = _refresh_location_relationships(updated_snapshot)
+    for path, updated in location_updates.items():
+        if updated == updated_snapshot.get(path):
+            continue
+        cli.create(path, updated)
+        if path not in report.changed_files:
+            report.changed_count += 1
+            report.changed_files.append(path)
+        updated_snapshot[path] = updated
+
     return report
+
+
+def _refresh_location_relationships(snapshot: dict[str, str]) -> dict[str, str]:
+    """Backfill location hierarchy and derived parent-child relationship sections."""
+    location_data: dict[str, tuple[dict, str, str, str | None]] = {}
+    children_by_parent: dict[str, list[str]] = {}
+
+    for path, content in snapshot.items():
+        if not path.startswith("Locations/"):
+            continue
+        frontmatter = _parse_frontmatter(content)
+        body = _strip_frontmatter(content)
+        name = _canonical_name(path, frontmatter)
+        parent = _infer_parent_location(frontmatter, body, name)
+        location_data[path] = (frontmatter, body, name, parent)
+        if parent:
+            children_by_parent.setdefault(parent, []).append(name)
+
+    updates: dict[str, str] = {}
+    for path, (frontmatter, body, name, parent) in location_data.items():
+        updated_frontmatter = dict(frontmatter)
+        if parent:
+            updated_frontmatter["parent_location"] = parent
+
+        child_locations = sorted(set(children_by_parent.get(name, [])))
+        updated_body = _upsert_location_relationship_section(body, parent, child_locations)
+        rebuilt = _frontmatter(**updated_frontmatter)
+        if updated_body and not updated_body.startswith("\n"):
+            candidate = f"{rebuilt}\n{updated_body}"
+        else:
+            candidate = f"{rebuilt}{updated_body}"
+        updates[path] = candidate
+
+    return updates
+
+
+def _infer_parent_location(frontmatter: dict, body: str, name: str) -> str | None:
+    """Infer a location's parent from frontmatter or explicit body phrases."""
+    parent = frontmatter.get("parent_location")
+    if isinstance(parent, str) and parent.strip():
+        return _strip_wikilink(parent.strip())
+
+    contained_match = re.search(r"\*\*Contained In:\*\*\s+\[\[([^\]]+)\]\]", body)
+    if contained_match:
+        return _strip_wikilink(contained_match.group(1))
+
+    description = _extract_section(body, "Description") or body
+    description = re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", r"\1", description)
+    match = re.search(
+        r"\b(?:district|location|area|quarter|ward|market|settlement|point of interest|notable area)\s+(?:in|within)\s+([A-Z][A-Za-z' -]+?)(?:\s+(?:containing|contains|featuring|known|with|near)\b|[.\n,]|$)",
+        description,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    candidate = match.group(1).strip()
+    if candidate and candidate != name:
+        return candidate
+    return None
+
+
+def _upsert_location_relationship_section(body: str, parent: str | None, child_locations: list[str]) -> str:
+    """Insert or replace a managed location-relationship section in note body."""
+    managed_header = "## Location Relationships"
+    start_marker = "<!-- chronicler:location-relationships:start -->"
+    end_marker = "<!-- chronicler:location-relationships:end -->"
+
+    body_without_section = re.sub(
+        rf"\n*{re.escape(managed_header)}\n\n{re.escape(start_marker)}\n.*?\n{re.escape(end_marker)}\n*",
+        "\n\n",
+        body,
+        flags=re.DOTALL,
+    ).rstrip()
+
+    lines: list[str] = []
+    if parent:
+        lines.append(f"**Contained In:** [[{parent}]]")
+    if child_locations:
+        lines.append(f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}")
+
+    if not lines:
+        return body_without_section + ("\n" if body_without_section else "")
+
+    section = "\n\n".join(
+        [
+            managed_header,
+            start_marker,
+            "\n".join(lines),
+            end_marker,
+        ]
+    )
+    if not body_without_section:
+        return section + "\n"
+    return body_without_section + "\n\n" + section + "\n"
+
+
+def _extract_section(body: str, heading: str) -> str:
+    """Extract text under a ``## heading`` until the next heading."""
+    lines = body.splitlines()
+    capture = False
+    result: list[str] = []
+    for line in lines:
+        if line.strip().lower() == f"## {heading.lower()}":
+            capture = True
+            continue
+        if capture:
+            if line.strip().startswith("## "):
+                break
+            result.append(line)
+    return " ".join(line.strip() for line in result if line.strip())
+
+
+def _strip_wikilink(value: str) -> str:
+    cleaned = value.strip()
+    while cleaned.startswith("[[") and cleaned.endswith("]]"):
+        cleaned = cleaned[2:-2].strip()
+    if "|" in cleaned:
+        cleaned = cleaned.split("|", 1)[0].strip()
+    return cleaned
 
 
 def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:

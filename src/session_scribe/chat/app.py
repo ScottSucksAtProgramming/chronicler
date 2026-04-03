@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -71,7 +73,7 @@ class ChatApp(App):
         return widget
 
     @on(Input.Submitted)
-    async def handle_input(self, event: Input.Submitted) -> None:
+    def handle_input(self, event: Input.Submitted) -> None:
         query = event.value.strip()
         if not query:
             return
@@ -86,8 +88,12 @@ class ChatApp(App):
         self._run_query(query)
 
     @work(thread=True)
-    async def _run_query(self, query: str) -> None:
-        """Run the RAG pipeline in a worker thread."""
+    def _run_query(self, query: str) -> None:
+        """Run the RAG pipeline in a worker thread.
+
+        Uses a fresh event loop per call to avoid 'Event loop is closed' errors.
+        Each async operation is run with asyncio.run() in its own loop.
+        """
         status: Static | None = None
 
         try:
@@ -96,7 +102,14 @@ class ChatApp(App):
                 self._add_message, "Searching vault...", "status-msg"
             )
 
-            results: list[SearchResult] = await self.retrieval.search(query)
+            # Run async search in a new event loop
+            loop = asyncio.new_event_loop()
+            try:
+                results: list[SearchResult] = loop.run_until_complete(
+                    self.retrieval.search(query)
+                )
+            finally:
+                loop.close()
 
             # Update status
             self.app.call_from_thread(self._update_status, status, "Thinking...")
@@ -108,8 +121,15 @@ class ChatApp(App):
                 model=self.model,
             )
 
-            # Call LLM
-            response = await self.gateway.complete(request)
+            # Call LLM in a new event loop
+            loop = asyncio.new_event_loop()
+            try:
+                response = loop.run_until_complete(
+                    self.gateway.complete(request)
+                )
+            finally:
+                loop.close()
+
             answer = response.content
 
             # Remove status widget
@@ -134,7 +154,10 @@ class ChatApp(App):
 
         except Exception as exc:
             if status is not None:
-                self.app.call_from_thread(status.remove)
+                try:
+                    self.app.call_from_thread(status.remove)
+                except Exception:
+                    pass
             self.app.call_from_thread(
                 self._add_message,
                 f"Error: {exc}",

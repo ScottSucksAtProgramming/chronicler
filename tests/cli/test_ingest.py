@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from session_scribe.cli.main import app
+from chronicler.cli.main import app
 
 runner = CliRunner()
 
@@ -52,7 +52,7 @@ class TestIngestCommand:
         async def fake_pipeline(*args, **kwargs):
             return mock_result
 
-        with patch("session_scribe.cli.main._run_ingest_pipeline", side_effect=fake_pipeline):
+        with patch("chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline):
             result = runner.invoke(app, ["ingest", str(pdf_file)])
 
         assert result.exit_code == 0
@@ -78,7 +78,7 @@ class TestIngestCommand:
         async def fake_pipeline(*args, **kwargs):
             return mock_result
 
-        with patch("session_scribe.cli.main._run_ingest_pipeline", side_effect=fake_pipeline):
+        with patch("chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline):
             result = runner.invoke(app, ["ingest", str(txt_file)])
 
         assert result.exit_code == 0
@@ -89,7 +89,7 @@ class TestIngestCommand:
         pdf_file = tmp_path / "session.pdf"
         pdf_file.write_bytes(b"%PDF-1.4 fake")
 
-        with patch("session_scribe.cli.main.Settings", side_effect=Exception("Missing API key")):
+        with patch("chronicler.cli.main.Settings", side_effect=Exception("Missing API key")):
             result = runner.invoke(app, ["ingest", str(pdf_file)])
 
         assert result.exit_code == 1
@@ -103,11 +103,27 @@ class TestIngestCommand:
         async def failing_pipeline(*args, **kwargs):
             raise RuntimeError("LLM unreachable")
 
-        with patch("session_scribe.cli.main._run_ingest_pipeline", side_effect=failing_pipeline):
+        with patch("chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline):
             result = runner.invoke(app, ["ingest", str(pdf_file)])
 
         assert result.exit_code == 1
         assert "LLM unreachable" in result.output or "error" in result.output.lower()
+
+    def test_ingest_shows_clear_message_for_content_filtered_transcript(self, tmp_path):
+        pdf_file = tmp_path / "session.txt"
+        pdf_file.write_text("00:00:00\nhello")
+
+        async def failing_pipeline(*args, **kwargs):
+            raise RuntimeError(
+                "LLM provider rejected the transcript as high-risk content, likely due to explicit off-topic banter."
+            )
+
+        with patch("chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline):
+            result = runner.invoke(app, ["ingest", str(pdf_file)])
+
+        assert result.exit_code == 1
+        assert "high-risk content" in result.output
+        assert "explicit off-topic banter" in result.output
 
     def test_ingest_session_number_option(self, tmp_path):
         """--session flag is accepted and forwarded."""
@@ -130,7 +146,7 @@ class TestIngestCommand:
             mock_result.recap.summary = "Summary."
             return mock_result
 
-        with patch("session_scribe.cli.main._run_ingest_pipeline", side_effect=capturing_pipeline):
+        with patch("chronicler.cli.main._run_ingest_pipeline", side_effect=capturing_pipeline):
             result = runner.invoke(app, ["ingest", str(pdf_file), "--session", "22"])
 
         assert result.exit_code == 0

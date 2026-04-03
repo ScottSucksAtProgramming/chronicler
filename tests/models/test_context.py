@@ -1,7 +1,7 @@
 """Tests for context bundle and agent memory models."""
 
 import pytest
-from session_scribe.models.context import (
+from chronicler.models.context import (
     AgentMemory,
     ContextBundle,
     EntitySummary,

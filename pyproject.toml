@@ -1,7 +1,7 @@
 [project]
-name = "session-scribe"
+name = "chronicler"
 version = "0.1.0"
-description = "D&D Session Scribe — AI agent for campaign note management"
+description = "Chronicler — AI agent for tabletop campaign note management"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",
@@ -17,14 +17,14 @@ dependencies = [
 ]
 
 [project.scripts]
-scribe = "session_scribe.cli.main:app"
+chronicler = "chronicler.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/session_scribe"]
+packages = ["src/chronicler"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

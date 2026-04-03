@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from session_scribe.retrieval.indexer import VaultIndexer, NoteChunk
+from chronicler.retrieval.indexer import VaultIndexer, NoteChunk
 
 
 class TestNoteChunk:

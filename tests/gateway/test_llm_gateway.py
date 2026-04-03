@@ -6,9 +6,9 @@ import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
 from pydantic import BaseModel
 
-from session_scribe.gateway.types import LLMRequest, LLMResponse, LLMUsage
-from session_scribe.gateway.llm_gateway import LLMGateway, LLMGatewayError
-from session_scribe.config.settings import Settings
+from chronicler.gateway.types import LLMRequest, LLMResponse, LLMUsage
+from chronicler.gateway.llm_gateway import LLMGateway, LLMGatewayError
+from chronicler.config.settings import Settings
 
 
 class SampleOutput(BaseModel):
@@ -109,6 +109,29 @@ class TestLLMGateway:
             with pytest.raises(LLMGatewayError, match="failed after"):
                 await gateway.complete(
                     LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model")
+                )
+
+    @pytest.mark.asyncio
+    async def test_complete_kimi_detects_content_filter_text(self, settings):
+        settings.llm_provider = "kimi"
+        gateway = LLMGateway(settings)
+
+        with patch("asyncio.get_event_loop") as mock_loop:
+            mock_executor = MagicMock()
+            mock_executor.return_value = MagicMock(
+                returncode=0,
+                stdout=(
+                    "Error code: 400 - {'error': {'code': 400, 'message': "
+                    "'The request was rejected because it was considered high risk', "
+                    "'param': 'prompt', 'type': 'content_filter'}}"
+                ),
+                stderr="",
+            )
+            mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_executor.return_value)
+
+            with pytest.raises(LLMGatewayError, match="rejected the prompt as high-risk content"):
+                await gateway.complete(
+                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
                 )
 
     @pytest.mark.asyncio

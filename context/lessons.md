@@ -1,11 +1,11 @@
 ---
-title: "D&D Session Scribe Lessons Learned"
-summary: "Running log of corrections, preferences, and discoveries for the Session Scribe project"
+title: "Chronicler Lessons Learned"
+summary: "Running log of corrections, preferences, and discoveries for the Chronicler project"
 created: 2026-04-02
 updated: 2026-04-02
 ---
 
-# D&D Session Scribe Lessons Learned
+# Chronicler Lessons Learned
 
 <!-- Append dated one-liners below. When 3+ related lessons accumulate, extract into a dedicated context file. -->
 
@@ -24,3 +24,5 @@ updated: 2026-04-02
 - 2026-04-02 (vault): The reviewer was refactored to use `read_all_notes()` (filesystem bulk read) instead of per-file CLI calls. This pattern should be used wherever possible — CLI subprocess overhead is ~300ms per call.
 - 2026-04-02 (retrieval): LM Studio's OpenAI-compatible `/embeddings` endpoint works cleanly with `httpx.AsyncClient`; `patch.object(client, "_client")` in tests is the right mock strategy since the client is an instance attribute, not a module-level import.
 - 2026-04-02 (milestone-6): Player characters work better as first-class `Party/` notes, but keeping a fallback read path from `_Agent/Memory/player-characters.md` avoids regressing older context-bundle and memory tests during the transition.
+- 2026-04-02 (repo): A package rename is not finished when imports compile. Repo polish also needs aligned ignore rules, maintenance docs, and generic top-level documentation so the remote repository reflects the supported public surface.
+- 2026-04-03 (vault-links): Obsidian link targets must canonicalize to actual note path stems, not display-style frontmatter names; quote-style and accent variants should normalize onto the filename so wiki links resolve to the real notes.

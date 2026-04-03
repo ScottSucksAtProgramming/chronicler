@@ -1,7 +1,7 @@
 """Tests for D&D campaign entity data models."""
 
 import pytest
-from session_scribe.models.entities import (
+from chronicler.models.entities import (
     NPC,
     Location,
     Faction,

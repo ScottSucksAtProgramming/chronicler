@@ -1,7 +1,7 @@
 """Tests for raw transcript parser."""
 
 import pytest
-from session_scribe.ingestion.transcript_parser import (
+from chronicler.ingestion.transcript_parser import (
     parse_transcript,
     TimestampedSegment,
 )
@@ -39,6 +39,22 @@ class TestParseTranscript:
         segments = parse_transcript("Just some text with no timestamps at all.")
         assert len(segments) == 1
         assert segments[0].timestamp == "00:00:00"
+
+    def test_no_timestamps_splits_on_blank_lines_into_multiple_segments(self):
+        text = (
+            "The party boards the ship.\n"
+            "The crew casts off.\n\n"
+            "Later that night they argue about the chest.\n"
+            "Seven keeps watch.\n\n"
+            "At dawn they spot the shoreline."
+        )
+        segments = parse_transcript(text)
+
+        assert len(segments) == 3
+        assert segments[0].timestamp == "00:00:00"
+        assert "boards the ship" in segments[0].text
+        assert "argue about the chest" in segments[1].text
+        assert "spot the shoreline" in segments[2].text
 
     def test_parses_real_session_022(self, session_022_dir):
         transcript_path = session_022_dir / "transcript.txt"

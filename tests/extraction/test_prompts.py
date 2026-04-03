@@ -1,11 +1,11 @@
 """Tests for extraction prompt templates."""
 
-from session_scribe.extraction.prompts import (
+from chronicler.extraction.prompts import (
     build_extraction_prompt,
     build_recap_prompt,
     build_quality_judge_prompt,
 )
-from session_scribe.models.context import ContextBundle, EntitySummary
+from chronicler.models.context import ContextBundle, EntitySummary
 
 
 class TestPromptTemplates:
@@ -40,7 +40,7 @@ class TestPromptTemplates:
         assert "Summary only" in prompt
 
     def test_extraction_prompt_includes_player_characters_warning(self):
-        from session_scribe.models.context import PlayerCharacter
+        from chronicler.models.context import PlayerCharacter
         context = ContextBundle(
             session_number=5,
             player_characters=[

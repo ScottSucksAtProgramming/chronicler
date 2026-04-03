@@ -3,7 +3,7 @@
 import json
 import pytest
 from unittest.mock import patch, MagicMock
-from session_scribe.vault.obsidian_cli import ObsidianCLI, ObsidianCLIError
+from chronicler.vault.obsidian_cli import ObsidianCLI, ObsidianCLIError
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ class TestObsidianCLI:
 
     def test_create_note(self, cli):
         with patch.object(cli, "_get_vault_path", return_value="/tmp/test-vault"):
-            with patch("session_scribe.vault.obsidian_cli.Path") as MockPath:
+            with patch("chronicler.vault.obsidian_cli.Path") as MockPath:
                 mock_path = MagicMock()
                 MockPath.return_value.__truediv__ = MagicMock(return_value=mock_path)
                 mock_path.parent.mkdir = MagicMock()

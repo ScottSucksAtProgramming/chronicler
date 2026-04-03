@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from session_scribe.ingestion.pdf_parser import parse_plaud_pdf, PLAUDParseError
+from chronicler.ingestion.pdf_parser import parse_plaud_pdf, PLAUDParseError
 
 
 class TestParsePLAUDPdf:

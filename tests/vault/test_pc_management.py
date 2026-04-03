@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from session_scribe.models.context import PlayerCharacter
-from session_scribe.vault.note_renderer import render_pc_note
-from session_scribe.vault.vault_manager import VaultManager
+from chronicler.models.context import PlayerCharacter
+from chronicler.vault.note_renderer import render_pc_note
+from chronicler.vault.vault_manager import VaultManager
 
 
 class TestRenderPCNote:
@@ -23,6 +23,9 @@ class TestRenderPCNote:
         assert "Scott" in md
         assert "Wizard" in md
         assert "type: player-character" in md
+        assert "## Overview" in md
+        assert "## Timeline" in md
+        assert "## Relationships" in md
 
     def test_render_pc_note_minimal(self) -> None:
         pc = PlayerCharacter(
@@ -35,6 +38,8 @@ class TestRenderPCNote:
         assert "# Bastion" in md
         assert "Unknown" in md
         assert "character_class:" not in md
+        assert "## Known Facts" in md
+        assert "## Open Questions" in md
 
 
 class TestVaultManagerPC:

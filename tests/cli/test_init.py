@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
-from session_scribe.cli.main import app
+from chronicler.cli.main import app
 
 runner = CliRunner()
 
@@ -29,9 +29,9 @@ class TestInitCommand:
         mock_vm = MagicMock()
 
         with (
-            patch("session_scribe.cli.main.Settings", return_value=mock_settings),
-            patch("session_scribe.cli.main.ObsidianCLI") as mock_cli_cls,
-            patch("session_scribe.cli.main.VaultManager", return_value=mock_vm) as mock_vm_cls,
+            patch("chronicler.cli.main.Settings", return_value=mock_settings),
+            patch("chronicler.cli.main.ObsidianCLI") as mock_cli_cls,
+            patch("chronicler.cli.main.VaultManager", return_value=mock_vm) as mock_vm_cls,
         ):
             result = runner.invoke(app, ["init"])
 
@@ -45,17 +45,15 @@ class TestInitCommand:
         mock_settings = MagicMock()
         mock_settings.vault_name = ""
 
-        with patch("session_scribe.cli.main.Settings", return_value=mock_settings):
+        with patch("chronicler.cli.main.Settings", return_value=mock_settings):
             result = runner.invoke(app, ["init"])
 
         assert result.exit_code == 1
-        assert "SCRIBE_VAULT_NAME" in result.output
+        assert "CHRONICLER_VAULT_NAME" in result.output
 
     def test_init_handles_config_error(self):
         """init command should handle Settings load failure gracefully."""
-        from pydantic import ValidationError
-
-        with patch("session_scribe.cli.main.Settings", side_effect=Exception("bad config")):
+        with patch("chronicler.cli.main.Settings", side_effect=Exception("bad config")):
             result = runner.invoke(app, ["init"])
 
         assert result.exit_code == 1

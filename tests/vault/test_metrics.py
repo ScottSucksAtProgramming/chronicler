@@ -2,7 +2,7 @@
 
 import pytest
 
-from session_scribe.vault.metrics import QualityMetrics, SessionMetric
+from chronicler.vault.metrics import QualityMetrics, SessionMetric
 
 
 class TestQualityMetrics:

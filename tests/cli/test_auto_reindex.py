@@ -2,7 +2,7 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from session_scribe.cli.main import _auto_reindex_vault
+from chronicler.cli.main import _auto_reindex_vault
 
 
 class TestAutoReindex:
@@ -25,9 +25,9 @@ class TestAutoReindex:
         fake_indexer.index_vault = AsyncMock(return_value=42)
 
         with (
-            patch("session_scribe.retrieval.embeddings.EmbeddingClient", return_value=fake_embed_client),
+            patch("chronicler.retrieval.embeddings.EmbeddingClient", return_value=fake_embed_client),
             patch("chromadb.PersistentClient", return_value=fake_chroma_client),
-            patch("session_scribe.retrieval.indexer.VaultIndexer", return_value=fake_indexer),
+            patch("chronicler.retrieval.indexer.VaultIndexer", return_value=fake_indexer),
         ):
             import asyncio
 
@@ -48,7 +48,7 @@ class TestAutoReindex:
         fake_embed_client.health_check.return_value = False
 
         with patch(
-            "session_scribe.retrieval.embeddings.EmbeddingClient",
+            "chronicler.retrieval.embeddings.EmbeddingClient",
             return_value=fake_embed_client,
         ):
             import asyncio

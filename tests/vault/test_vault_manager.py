@@ -3,8 +3,8 @@
 import pytest
 import yaml
 from unittest.mock import MagicMock, patch, call
-from session_scribe.vault.vault_manager import VaultManager
-from session_scribe.models.entities import (
+from chronicler.vault.vault_manager import VaultManager
+from chronicler.models.entities import (
     NPC,
     Location,
     Faction,
@@ -13,13 +13,13 @@ from session_scribe.models.entities import (
     EntityStatus,
     ThreadStatus,
 )
-from session_scribe.models.session import SessionRecap, KeyEvent
-from session_scribe.models.extraction import (
+from chronicler.models.session import SessionRecap, KeyEvent
+from chronicler.models.extraction import (
     ExtractionResult,
     AgentQuestion,
     QuestionPriority,
 )
-from session_scribe.models.context import (
+from chronicler.models.context import (
     ContextBundle,
     AgentMemory,
     PlayerCharacter,
@@ -167,6 +167,11 @@ class TestVaultInit:
         created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
         assert any("Review-Log.md" in p for p in created_paths)
 
+    def test_init_vault_seeds_vault_guide(self, manager, mock_cli):
+        manager.init_vault()
+        created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
+        assert "_Agent/Memory/vault-guide.md" in created_paths
+
 
 # ---------------------------------------------------------------------------
 # TestWriteEntities
@@ -230,6 +235,71 @@ class TestWriteEntities:
         mock_cli.create.assert_called_once()
         path_arg = mock_cli.create.call_args[0][0]
         assert path_arg == "Sessions/Session-001.md"
+
+    def test_write_extraction_result_updates_party_notes_from_session(self, manager, mock_cli):
+        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
+            "Party/": ["Party/Celestine Silverleaf.md"],
+            "NPCs/": [],
+            "Locations/": [],
+        }.get(folder, [])
+        mock_cli.read.side_effect = lambda path: {
+            "Party/Celestine Silverleaf.md": (
+                "---\n"
+                "type: player-character\n"
+                "player_name: Tina\n"
+                "character_name: Celestine Silverleaf\n"
+                "character_class: Sorcerer\n"
+                "---\n"
+                "# Celestine Silverleaf\n\n"
+                "## Overview\n\n"
+                "_No overview yet._\n\n"
+                "## Aliases\n\n"
+                "_No aliases recorded yet._\n\n"
+                "## Known Facts\n\n"
+                "- **Player:** Tina\n"
+                "- **Class:** Sorcerer\n\n"
+                "## Timeline\n\n"
+                "_No timeline entries yet._\n\n"
+                "## Relationships\n\n"
+                "_No relationships recorded yet._\n\n"
+                "## Notable Items\n\n"
+                "_No notable items recorded yet._\n\n"
+                "## Open Questions\n\n"
+                "_No open questions._\n"
+            ),
+            "Sessions/Session-003.md": (
+                "---\n"
+                "type: session\n"
+                'title: "Session 3: Trouble at Sea"\n'
+                "---\n"
+                "# Session 3: Trouble at Sea\n\n"
+                "## Summary\n\n"
+                "[[Celestine Silverleaf]] paralyzed the Oracle with Hold Person.\n"
+            ),
+        }.get(path, "")
+
+        result = ExtractionResult(
+            session_number=3,
+            npcs=[],
+            locations=[],
+            factions=[],
+            loot=[],
+            plot_threads=[],
+            recap=SessionRecap(
+                session_number=3,
+                title="Trouble at Sea",
+                summary="Celestine Silverleaf paralyzed the Oracle with Hold Person.",
+                key_events=[],
+            ),
+        )
+
+        manager.write_extraction_result(result)
+
+        updated_party_calls = [
+            call for call in mock_cli.create.call_args_list if call.args[0] == "Party/Celestine Silverleaf.md"
+        ]
+        assert updated_party_calls
+        assert "[[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person." in updated_party_calls[-1].args[1]
 
     def test_write_npc_content_contains_frontmatter(self, manager, mock_cli):
         npc = _sample_npc()

@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from session_scribe.cli.main import app
-from session_scribe.models.extraction import ExtractionResult, QualityScore
-from session_scribe.models.session import SessionRecap
+from chronicler.cli.main import app
+from chronicler.models.extraction import ExtractionResult, QualityScore
+from chronicler.models.session import SessionRecap
 
 runner = CliRunner()
 
@@ -18,8 +18,8 @@ class TestStatsCommand:
         mock_settings.vault_name = "Test"
 
         with (
-            patch("session_scribe.cli.main.Settings", return_value=mock_settings),
-            patch("session_scribe.cli.main.QualityMetrics") as mock_metrics_cls,
+            patch("chronicler.cli.main.Settings", return_value=mock_settings),
+            patch("chronicler.cli.main.QualityMetrics") as mock_metrics_cls,
         ):
             mock_metrics_cls.return_value.summary.return_value = {
                 "sessions_processed": 0
@@ -36,8 +36,8 @@ class TestStatsCommand:
         mock_settings.vault_name = "Test"
 
         with (
-            patch("session_scribe.cli.main.Settings", return_value=mock_settings),
-            patch("session_scribe.cli.main.QualityMetrics") as mock_metrics_cls,
+            patch("chronicler.cli.main.Settings", return_value=mock_settings),
+            patch("chronicler.cli.main.QualityMetrics") as mock_metrics_cls,
         ):
             mock_metrics_cls.return_value.summary.return_value = {
                 "sessions_processed": 2,
@@ -57,7 +57,7 @@ class TestStatsCommand:
 
 class TestMetricLogging:
     def test_record_session_metric_uses_reviewer_findings(self, tmp_path) -> None:
-        from session_scribe.cli.main import _record_session_metric
+        from chronicler.cli.main import _record_session_metric
 
         settings = MagicMock()
         settings.vault_path = tmp_path
@@ -82,12 +82,12 @@ class TestMetricLogging:
         report = MagicMock(total_findings=9)
         cli = MagicMock()
 
-        with patch("session_scribe.cli.main.review_vault", return_value=report):
+        with patch("chronicler.cli.main.review_vault", return_value=report):
             _record_session_metric(settings, cli, result)
 
-        from session_scribe.vault.metrics import QualityMetrics
+        from chronicler.vault.metrics import QualityMetrics
 
-        metrics = QualityMetrics(tmp_path / ".scribe" / "metrics.json")
+        metrics = QualityMetrics(tmp_path / ".chronicler" / "metrics.json")
         stored = metrics.all()
         assert len(stored) == 1
         assert stored[0].session_number == 7

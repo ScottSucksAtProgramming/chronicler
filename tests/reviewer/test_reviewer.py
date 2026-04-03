@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import MagicMock
 
-from session_scribe.reviewer.reviewer import review_vault, ReviewReport
-from session_scribe.reviewer.checks import ReviewFinding, Severity
+from chronicler.reviewer.reviewer import review_vault, ReviewReport
+from chronicler.reviewer.checks import ReviewFinding, Severity
 
 
 class TestReviewVault:

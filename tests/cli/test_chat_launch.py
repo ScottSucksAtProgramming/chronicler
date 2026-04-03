@@ -2,7 +2,7 @@
 
 from typer.testing import CliRunner
 from unittest.mock import patch, MagicMock
-from session_scribe.cli.main import app
+from chronicler.cli.main import app
 
 runner = CliRunner()
 

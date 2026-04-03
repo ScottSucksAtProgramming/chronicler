@@ -3,7 +3,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from session_scribe.retrieval.embeddings import EmbeddingClient
+from chronicler.retrieval.embeddings import EmbeddingClient
 
 
 @pytest.fixture

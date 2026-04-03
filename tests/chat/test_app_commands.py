@@ -2,11 +2,40 @@
 
 from unittest.mock import MagicMock
 
-from session_scribe.chat.app import ChatApp
-from session_scribe.models.context import AgentMemory
+from chronicler.chat.app import ChatApp
+from chronicler.models.context import AgentMemory
 
 
 class TestChatCommands:
+    def test_format_sources_includes_core_and_supporting_notes(self) -> None:
+        from chronicler.chat.context_loader import ChatContextBundle, DirectVaultNote
+        from chronicler.retrieval.retrieval import SearchResult
+
+        app = ChatApp(
+            retrieval=MagicMock(),
+            gateway=MagicMock(),
+            model="test-model",
+        )
+
+        bundle = ChatContextBundle(
+            core_notes=[DirectVaultNote(path="Party/Seven.md", content="Seven")],
+            supporting_notes=[DirectVaultNote(path="Sessions/Session-002.md", content="Session 2")],
+            retrieval_hits=[
+                SearchResult(
+                    path="Locations/Small Merchant Vessel.md",
+                    heading="Description",
+                    content="The Black Cherry.",
+                    score=0.12,
+                )
+            ],
+        )
+
+        text = app._format_sources(bundle)
+
+        assert "Party/Seven.md" in text
+        assert "Sessions/Session-002.md" in text
+        assert "Locations/Small Merchant Vessel.md > Description" in text
+
     def test_help_command_lists_available_commands(self) -> None:
         app = ChatApp(
             retrieval=MagicMock(),

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+.pytest_cache/
 dist/
 build/
 *.egg
@@ -43,7 +44,7 @@ Thumbs.db
 # PLAUD source files (large, not code)
 04-01 Summary*
 # ChromaDB local storage
-.scribe/
+.chronicler/
 
 # Local git worktrees
 .worktrees/

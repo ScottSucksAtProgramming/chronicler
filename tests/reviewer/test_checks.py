@@ -2,7 +2,7 @@
 
 import pytest
 
-from session_scribe.reviewer.checks import (
+from chronicler.reviewer.checks import (
     check_broken_wikilinks,
     check_missing_fields,
     check_duplicate_entities,

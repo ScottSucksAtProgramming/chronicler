@@ -1,8 +1,8 @@
-# D&D Session Scribe
+# Chronicler
 
 ## Purpose
 
-AI agent that ingests PLAUD session recordings (PDF summaries + raw transcripts), extracts structured D&D campaign data via LLM, populates an Obsidian vault, and provides an interactive CLI for querying campaign knowledge. Built for Scott's active campaign (22+ sessions, 7-8 players). Also a portfolio piece.
+AI agent that ingests PLAUD session recordings (PDF summaries + raw transcripts), extracts structured tabletop campaign data via LLM, populates an Obsidian vault, and provides an interactive CLI for querying campaign knowledge.
 
 ## Tree
 
@@ -14,7 +14,7 @@ dnd_notes_organizaer/
   pyproject.toml
   .env.example
   src/
-    session_scribe/
+    chronicler/
       __init__.py
       py.typed
       cli/
@@ -30,7 +30,7 @@ dnd_notes_organizaer/
         llm_gateway.py   — LLMGateway (nano-gpt.com, retries, structured output)
         types.py         — LLMRequest, LLMResponse, LLMUsage
       config/
-        settings.py      — Settings via pydantic-settings (SCRIBE_ env prefix)
+        settings.py      — Settings via pydantic-settings (CHRONICLER_ env prefix)
       ingestion/
         __init__.py
         pdf_parser.py    — parse_plaud_pdf, ParsedPDF, PDFSection, PLAUDParseError
@@ -59,8 +59,10 @@ dnd_notes_organizaer/
     superpowers/
       specs/
         2026-04-02-session-scribe-design.md
+        2026-04-02-chronicler-rename-and-docs-design.md
       plans/
         2026-04-02-milestone-1-foundation.md
+        2026-04-02-chronicler-rename-and-docs.md
   context/
     conventions.md
     lessons.md
@@ -69,9 +71,9 @@ dnd_notes_organizaer/
 ## Rules
 
 1. On session start within `dnd_notes_organizaer/`, read this file, then `INDEX.md`.
-2. The **design spec** (`docs/superpowers/specs/2026-04-02-session-scribe-design.md`) is the primary reference for architecture, modules, and scope. The original PRD is historical only.
+2. The **design spec** (`docs/superpowers/specs/2026-04-02-session-scribe-design.md`) is the primary reference for architecture, modules, and scope. The rename/design doc (`docs/superpowers/specs/2026-04-02-chronicler-rename-and-docs-design.md`) covers the public-facing rename and repo documentation pass. The original PRD is historical only.
 3. Read the relevant **milestone plan** before starting implementation work.
-4. Do not deviate from the vault structure or module boundaries in the spec without discussing with Scott.
+4. Do not deviate from the vault structure or module boundaries in the spec without discussion.
 5. When creating, renaming, or deleting files, update the Tree section above.
 6. Follow the Note-Taking protocol below after completing tasks.
 

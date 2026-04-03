@@ -4,12 +4,12 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from session_scribe.ingestion.banter_filter import (
+from chronicler.ingestion.banter_filter import (
     filter_banter,
     BANTER_FILTER_PROMPT,
 )
-from session_scribe.ingestion.transcript_parser import TimestampedSegment
-from session_scribe.models.session import TranscriptSegment
+from chronicler.ingestion.transcript_parser import TimestampedSegment
+from chronicler.models.session import TranscriptSegment
 
 
 GAME_SEGMENT = TimestampedSegment(

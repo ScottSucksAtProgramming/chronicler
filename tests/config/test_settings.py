@@ -7,7 +7,7 @@ from pathlib import Path
 
 class TestSettings:
     def test_load_default_settings(self):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
         settings = Settings(
             vault_path=Path("/tmp/test-vault"),
@@ -17,7 +17,7 @@ class TestSettings:
         assert settings.llm_provider == "kimi"  # default provider
 
     def test_load_nanogpt_settings(self):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
         settings = Settings(
             vault_path=Path("/tmp/test-vault"),
@@ -29,11 +29,11 @@ class TestSettings:
         assert settings.nanogpt_model is not None
 
     def test_settings_from_env(self, monkeypatch):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
-        monkeypatch.setenv("SCRIBE_VAULT_PATH", "/tmp/env-vault")
-        monkeypatch.setenv("SCRIBE_NANOGPT_API_KEY", "env-key-456")
-        monkeypatch.setenv("SCRIBE_NANOGPT_MODEL", "claude-3-opus")
+        monkeypatch.setenv("CHRONICLER_VAULT_PATH", "/tmp/env-vault")
+        monkeypatch.setenv("CHRONICLER_NANOGPT_API_KEY", "env-key-456")
+        monkeypatch.setenv("CHRONICLER_NANOGPT_MODEL", "claude-3-opus")
 
         settings = Settings(_env_file=None)
         assert settings.vault_path == Path("/tmp/env-vault")
@@ -41,7 +41,7 @@ class TestSettings:
         assert settings.nanogpt_model == "claude-3-opus"
 
     def test_settings_validates_vault_path_type(self):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
         settings = Settings(
             vault_path="/tmp/string-path",
@@ -51,7 +51,7 @@ class TestSettings:
         assert isinstance(settings.vault_path, Path)
 
     def test_lm_studio_defaults(self):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
         settings = Settings(
             vault_path=Path("/tmp/test"),
@@ -62,10 +62,10 @@ class TestSettings:
         assert settings.embedding_model == "text-embedding-nomic-embed-text-v1.5"
 
     def test_missing_required_fields_raises(self, monkeypatch):
-        from session_scribe.config.settings import Settings
+        from chronicler.config.settings import Settings
 
-        monkeypatch.delenv("SCRIBE_VAULT_PATH", raising=False)
-        monkeypatch.delenv("SCRIBE_NANOGPT_API_KEY", raising=False)
+        monkeypatch.delenv("CHRONICLER_VAULT_PATH", raising=False)
+        monkeypatch.delenv("CHRONICLER_NANOGPT_API_KEY", raising=False)
 
         with pytest.raises(Exception):
             Settings(_env_file=None)

@@ -1,7 +1,7 @@
 """Tests for entity deduplication logic."""
 
 import pytest
-from session_scribe.vault.dedup import find_match, is_duplicate
+from chronicler.vault.dedup import find_match, is_duplicate
 
 
 class TestFindMatch:

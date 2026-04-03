@@ -1,4 +1,4 @@
-"""Shared test fixtures for session_scribe tests."""
+"""Shared test fixtures for chronicler tests."""
 
 import json
 import pytest
@@ -10,7 +10,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 @pytest.fixture
 def settings():
     """Create a test Settings instance with dummy values."""
-    from session_scribe.config.settings import Settings
+    from chronicler.config.settings import Settings
 
     return Settings(
         vault_path=Path("/tmp/test-vault"),

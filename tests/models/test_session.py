@@ -1,7 +1,7 @@
 """Tests for session-related data models."""
 
 import pytest
-from session_scribe.models.session import (
+from chronicler.models.session import (
     NormalizedSession,
     TranscriptSegment,
     SessionRecap,

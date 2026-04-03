@@ -10,12 +10,12 @@ Run with: pytest -m integration tests/extraction/test_golden_eval.py -v -s
 import asyncio
 import pytest
 
-from session_scribe.ingestion import parse_plaud_pdf, parse_transcript
-from session_scribe.ingestion.normalizer import normalize_session
-from session_scribe.extraction import extract_session
-from session_scribe.models.context import ContextBundle
-from session_scribe.gateway.llm_gateway import LLMGateway
-from session_scribe.config.settings import Settings
+from chronicler.ingestion import parse_plaud_pdf, parse_transcript
+from chronicler.ingestion.normalizer import normalize_session
+from chronicler.extraction import extract_session
+from chronicler.models.context import ContextBundle
+from chronicler.gateway.llm_gateway import LLMGateway
+from chronicler.config.settings import Settings
 
 
 def _precision_recall(extracted_names: set[str], expected_names: set[str]) -> tuple[float, float]:

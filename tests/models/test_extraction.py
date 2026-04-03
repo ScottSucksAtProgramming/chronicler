@@ -1,14 +1,14 @@
 """Tests for extraction result data models."""
 
 import pytest
-from session_scribe.models.extraction import (
+from chronicler.models.extraction import (
     ExtractionResult,
     AgentQuestion,
     QuestionPriority,
     QualityScore,
 )
-from session_scribe.models.entities import NPC, Location, Faction, LootItem, PlotThread, ThreadStatus
-from session_scribe.models.session import SessionRecap, KeyEvent
+from chronicler.models.entities import NPC, Location, Faction, LootItem, PlotThread, ThreadStatus
+from chronicler.models.session import SessionRecap, KeyEvent
 
 
 class TestExtractionResult:

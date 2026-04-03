@@ -4,10 +4,10 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from session_scribe.extraction.extractor import extract_session
-from session_scribe.models.session import NormalizedSession, TranscriptSegment
-from session_scribe.models.context import ContextBundle
-from session_scribe.models.extraction import ExtractionResult
+from chronicler.extraction.extractor import extract_session
+from chronicler.models.session import NormalizedSession, TranscriptSegment
+from chronicler.models.context import ContextBundle
+from chronicler.models.extraction import ExtractionResult
 
 
 MOCK_EXTRACTION_RESPONSE = json.dumps({

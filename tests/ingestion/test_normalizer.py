@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from session_scribe.ingestion.normalizer import normalize_session
-from session_scribe.ingestion.pdf_parser import ParsedPDF, PDFSection
-from session_scribe.ingestion.transcript_parser import TimestampedSegment
-from session_scribe.models.session import NormalizedSession
+from chronicler.ingestion.normalizer import normalize_session
+from chronicler.ingestion.pdf_parser import ParsedPDF, PDFSection
+from chronicler.ingestion.transcript_parser import TimestampedSegment
+from chronicler.models.session import NormalizedSession
 
 
 @pytest.fixture

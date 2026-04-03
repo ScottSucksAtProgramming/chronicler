@@ -4,7 +4,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from session_scribe.retrieval.retrieval import RetrievalLayer, SearchResult
+from chronicler.retrieval.retrieval import RetrievalLayer, SearchResult
 
 
 @pytest.fixture

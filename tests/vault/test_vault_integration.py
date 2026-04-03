@@ -4,10 +4,10 @@ Run with: pytest -m integration tests/vault/test_vault_integration.py -v -s
 """
 
 import pytest
-from session_scribe.vault.obsidian_cli import ObsidianCLI
-from session_scribe.vault.vault_manager import VaultManager
-from session_scribe.config.settings import Settings
-from session_scribe.models.entities import NPC, Location, EntityStatus
+from chronicler.vault.obsidian_cli import ObsidianCLI
+from chronicler.vault.vault_manager import VaultManager
+from chronicler.config.settings import Settings
+from chronicler.models.entities import NPC, Location, EntityStatus
 
 
 @pytest.mark.integration
@@ -17,7 +17,7 @@ class TestVaultIntegration:
     @pytest.fixture
     def real_cli(self):
         settings = Settings()
-        assert settings.vault_name, "SCRIBE_VAULT_NAME must be set for integration tests"
+        assert settings.vault_name, "CHRONICLER_VAULT_NAME must be set for integration tests"
         return ObsidianCLI(vault_name=settings.vault_name)
 
     @pytest.fixture

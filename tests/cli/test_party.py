@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from session_scribe.cli.main import app
-from session_scribe.models.context import PlayerCharacter
+from chronicler.cli.main import app
+from chronicler.models.context import PlayerCharacter
 
 runner = CliRunner()
 
@@ -17,9 +17,9 @@ class TestPartyCommand:
 
     def test_party_list_empty(self) -> None:
         with (
-            patch("session_scribe.cli.main.Settings") as mock_settings_cls,
-            patch("session_scribe.cli.main.ObsidianCLI"),
-            patch("session_scribe.cli.main.VaultManager") as mock_vm_cls,
+            patch("chronicler.cli.main.Settings") as mock_settings_cls,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.VaultManager") as mock_vm_cls,
         ):
             mock_settings_cls.return_value = MagicMock(vault_name="Test")
             mock_vm_cls.return_value.read_player_characters.return_value = []
@@ -31,9 +31,9 @@ class TestPartyCommand:
 
     def test_party_list_populated(self) -> None:
         with (
-            patch("session_scribe.cli.main.Settings") as mock_settings_cls,
-            patch("session_scribe.cli.main.ObsidianCLI"),
-            patch("session_scribe.cli.main.VaultManager") as mock_vm_cls,
+            patch("chronicler.cli.main.Settings") as mock_settings_cls,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.VaultManager") as mock_vm_cls,
         ):
             mock_settings_cls.return_value = MagicMock(vault_name="Test")
             mock_vm_cls.return_value.read_player_characters.return_value = [
@@ -53,9 +53,9 @@ class TestPartyCommand:
 
     def test_party_add(self) -> None:
         with (
-            patch("session_scribe.cli.main.Settings") as mock_settings_cls,
-            patch("session_scribe.cli.main.ObsidianCLI"),
-            patch("session_scribe.cli.main.VaultManager") as mock_vm_cls,
+            patch("chronicler.cli.main.Settings") as mock_settings_cls,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.VaultManager") as mock_vm_cls,
         ):
             mock_settings_cls.return_value = MagicMock(vault_name="Test")
             mock_vm = mock_vm_cls.return_value
@@ -79,9 +79,9 @@ class TestPartyCommand:
 
     def test_party_remove(self) -> None:
         with (
-            patch("session_scribe.cli.main.Settings") as mock_settings_cls,
-            patch("session_scribe.cli.main.ObsidianCLI"),
-            patch("session_scribe.cli.main.VaultManager") as mock_vm_cls,
+            patch("chronicler.cli.main.Settings") as mock_settings_cls,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.VaultManager") as mock_vm_cls,
         ):
             mock_settings_cls.return_value = MagicMock(vault_name="Test")
             mock_vm = mock_vm_cls.return_value

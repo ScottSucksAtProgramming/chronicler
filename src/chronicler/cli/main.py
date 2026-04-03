@@ -11,12 +11,21 @@ import typer
 from rich.console import Console
 
 from chronicler.config.settings import Settings
+from chronicler.extraction.source_extractor import extract_source_document
+from chronicler.gateway.llm_gateway import LLMGateway
+from chronicler.ingestion import (
+    classify_source_document,
+    is_ambiguous,
+    parse_source_document,
+)
+from chronicler.models import DocumentType, SourceClassification
 from chronicler.models.context import PlayerCharacter
-from chronicler.models.extraction import ExtractionResult
+from chronicler.models.extraction import ExtractionResult, KnowledgeIngestResult
 from chronicler.reviewer import review_vault
 from chronicler.vault.improver import improve_vault
 from chronicler.vault.metrics import QualityMetrics, SessionMetric
 from chronicler.vault.obsidian_cli import ObsidianCLI
+from chronicler.vault.source_archive import archive_source_document
 from chronicler.vault.vault_manager import VaultManager
 
 app = typer.Typer(
@@ -27,6 +36,8 @@ app = typer.Typer(
 party_app = typer.Typer(help="Manage player characters.")
 app.add_typer(party_app, name="party")
 console = Console()
+_SESSION_FILE_SUFFIXES = {".pdf", ".txt"}
+_SOURCE_FILE_SUFFIXES = {".md", ".txt", ".pdf"}
 
 
 class _ConfigError(Exception):
@@ -51,8 +62,23 @@ def _load_vault_manager() -> VaultManager:
         console.print("[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]")
         raise typer.Exit(1)
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     return VaultManager(cli)
+
+
+def _confirm_ambiguous_source(file_path: Path) -> SourceClassification:
+    console.print(
+        f"[yellow]Could not confidently classify {file_path.name}.[/yellow]"
+    )
+    selected = typer.prompt(
+        "How should this source be treated? "
+        "(session_transcript, session_summary, session_support, legacy_note, campaign_background)",
+        default="legacy_note",
+    )
+    return SourceClassification(
+        document_type=DocumentType(selected),
+        confidence=1.0,
+    )
 
 
 def _metrics_path(settings: Settings) -> Path:
@@ -153,7 +179,7 @@ async def _run_ingest_pipeline(
 
         # Step 2b: Create VaultManager and get context from vault
         if settings.vault_name:
-            cli = ObsidianCLI(settings.vault_name)
+            cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
             vault_manager = VaultManager(cli)
             try:
                 console.print("[cyan]Loading campaign context from vault...[/cyan]")
@@ -228,6 +254,67 @@ async def _run_ingest_pipeline(
         await gateway.close()
 
 
+async def _run_source_ingest_pipeline(
+    files: list[Path],
+    session_number: int | None,
+) -> "KnowledgeIngestResult":
+    """Async helper that extracts knowledge from general source documents."""
+    from chronicler.models.context import ContextBundle
+
+    try:
+        settings = Settings()
+    except Exception as exc:
+        from pydantic import ValidationError
+        if isinstance(exc, ValidationError):
+            missing = [err["loc"][0] for err in exc.errors() if err["type"] == "missing"]
+            if missing:
+                env_vars = [f"CHRONICLER_{name.upper()}" for name in missing]
+                raise _ConfigError(f"missing required setting(s): {', '.join(env_vars)}") from exc
+        raise _ConfigError(str(exc)) from exc
+
+    gateway = LLMGateway(settings)
+
+    try:
+        document = parse_source_document(files[0])
+        classification = classify_source_document(document, session_number)
+        document.classification = classification
+        vault_manager = None
+
+        if settings.vault_name:
+            cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
+            vault_manager = VaultManager(cli)
+            try:
+                context = vault_manager.get_context_bundle(session_number or 0)
+            except Exception:
+                context = ContextBundle(session_number=session_number or 0)
+        else:
+            context = ContextBundle(session_number=session_number or 0)
+
+        model = (
+            settings.kimi_model or "kimi-default"
+            if settings.llm_provider == "kimi"
+            else settings.nanogpt_model
+        )
+
+        result = await extract_source_document(
+            document=document,
+            context=context,
+            gateway=gateway,
+            model=model,
+        )
+        archive_vault_path = settings.vault_path
+        if vault_manager is not None:
+            resolved_path = cli.get_vault_path()
+            if resolved_path is not None:
+                archive_vault_path = resolved_path
+        archive_source_document(archive_vault_path, document)
+        if vault_manager is not None:
+            vault_manager.write_source_ingest_result(result)
+        return result
+    finally:
+        await gateway.close()
+
+
 @app.command()
 def ingest(
     files: Annotated[
@@ -246,10 +333,10 @@ def ingest(
         if not f.exists():
             console.print(f"[red]Error: File not found: {f}[/red]")
             raise typer.Exit(1)
-        if f.suffix.lower() not in {".pdf", ".txt"}:
+        if f.suffix.lower() not in (_SESSION_FILE_SUFFIXES | _SOURCE_FILE_SUFFIXES):
             console.print(
                 f"[red]Error: Unsupported file type '{f.suffix}' for {f.name}. "
-                "Only .pdf and .txt files are accepted.[/red]"
+                "Supported types currently include .pdf, .txt, and .md.[/red]"
             )
             raise typer.Exit(1)
         console.print(f"  - {f.name}")
@@ -257,13 +344,53 @@ def ingest(
     # --- Separate by type ---
     pdf_files = [f for f in files if f.suffix.lower() == ".pdf"]
     txt_files = [f for f in files if f.suffix.lower() == ".txt"]
+    source_files = [f for f in files if f.suffix.lower() in _SOURCE_FILE_SUFFIXES]
 
-    if not pdf_files and not txt_files:
-        console.print("[red]Error: No .pdf or .txt files provided.[/red]")
+    if not pdf_files and not txt_files and not source_files:
+        console.print("[red]Error: No supported source files provided.[/red]")
         raise typer.Exit(1)
 
     # --- Determine session number ---
     effective_session = session_number if session_number is not None else 0
+
+    # --- Smart route a single file by classified intent ---
+    if len(files) == 1:
+        document = parse_source_document(files[0])
+        classification = classify_source_document(document, session_number)
+        if is_ambiguous(classification):
+            classification = _confirm_ambiguous_source(files[0])
+
+        if classification.document_type in {
+            DocumentType.LEGACY_NOTE,
+            DocumentType.CAMPAIGN_BACKGROUND,
+            DocumentType.MAP_IMAGE,
+            DocumentType.TABLE_REFERENCE,
+        }:
+            try:
+                source_result = asyncio.run(
+                    _run_source_ingest_pipeline(files, session_number)
+                )
+            except _ConfigError as e:
+                console.print(f"[red]Configuration error: {e}[/red]")
+                console.print("\nFix your configuration and try again:")
+                console.print("  chronicler config")
+                raise typer.Exit(1)
+            except Exception as e:
+                console.print(f"[red]Pipeline error: {e}[/red]")
+                raise typer.Exit(1)
+
+            console.print("\n[bold green]Knowledge ingest complete![/bold green]")
+            console.print(f"  NPCs:         {len(source_result.npcs)}")
+            console.print(f"  Locations:    {len(source_result.locations)}")
+            console.print(f"  Factions:     {len(source_result.factions)}")
+            console.print(f"  Loot items:   {len(source_result.loot)}")
+            console.print(f"  Plot threads: {len(source_result.plot_threads)}")
+            if source_result.questions:
+                console.print(f"  Questions:    {len(source_result.questions)}")
+            if source_result.recap:
+                console.print(f"\n[bold]Anchored Recap — {source_result.recap.title}[/bold]")
+                console.print(source_result.recap.summary)
+            return
 
     # --- Run pipeline ---
     try:
@@ -330,7 +457,7 @@ def init() -> None:
         )
         raise typer.Exit(1)
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     vault_manager = VaultManager(cli)
 
     try:
@@ -443,7 +570,7 @@ def chat() -> None:
 
     layer = RetrievalLayer(collection, embed_client)
     gateway = LLMGateway(settings)
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     vault_manager = VaultManager(cli)
 
     model = (
@@ -476,7 +603,7 @@ def review() -> None:
         console.print("[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]")
         raise typer.Exit(1)
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     report = review_vault(cli)
 
     # Print each finding with severity-based colouring
@@ -533,7 +660,7 @@ def improve() -> None:
         console.print("[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]")
         raise typer.Exit(1)
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     report = improve_vault(cli)
 
     console.print(
@@ -563,7 +690,7 @@ def ask() -> None:
         console.print("[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]")
         raise typer.Exit(1)
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
 
     # List question files, excluding the answered/ subfolder
     all_questions = cli.find_notes_in_folder("_Agent/Questions/")
@@ -656,7 +783,7 @@ def reindex() -> None:
     from chronicler.retrieval.embeddings import EmbeddingClient
     from chronicler.retrieval.indexer import VaultIndexer
 
-    cli = ObsidianCLI(settings.vault_name)
+    cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
     embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
 
     if not embed_client.health_check():

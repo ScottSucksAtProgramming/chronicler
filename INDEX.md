@@ -22,10 +22,12 @@ Quick reference for the repository.
 | `docs/superpowers/specs/2026-04-03-hybrid-chat-vault-reads-design.md` | Hybrid chat design that combines direct vault reads with retrieval |
 | `docs/superpowers/specs/2026-04-03-vault-improve-design.md` | Design for deterministic full-vault maintenance and ambiguity routing |
 | `docs/superpowers/specs/2026-04-03-party-notes-maintenance-design.md` | Design for evolving party notes as maintained entity records |
+| `docs/superpowers/specs/2026-04-03-knowledge-source-ingest-design.md` | Design for smart ingest of general source materials with provenance and optional session anchoring |
 | `docs/superpowers/plans/2026-04-02-chronicler-rename-and-docs.md` | Implementation plan for the rename and documentation pass |
 | `docs/superpowers/plans/2026-04-03-hybrid-chat-vault-reads.md` | Implementation plan for hybrid vault-aware chat |
 | `docs/superpowers/plans/2026-04-03-vault-improve.md` | Implementation plan for `chronicler improve` |
 | `docs/superpowers/plans/2026-04-03-party-notes-maintenance.md` | Implementation plan for maintained party-note updates |
+| `docs/superpowers/plans/2026-04-03-knowledge-source-ingest.md` | Implementation plan for smart source-material ingest |
 
 ## Source Layout
 
@@ -34,9 +36,9 @@ Quick reference for the repository.
 | `src/chronicler/cli/` | Typer CLI commands and entrypoint |
 | `src/chronicler/config/` | Environment-driven settings |
 | `src/chronicler/gateway/` | LLM provider integration |
-| `src/chronicler/ingestion/` | PLAUD PDF and transcript parsing plus normalization |
-| `src/chronicler/extraction/` | Structured entity extraction prompts and orchestration |
-| `src/chronicler/vault/` | Obsidian integration, note rendering, deduplication, metrics |
+| `src/chronicler/ingestion/` | PLAUD parsing plus general source parsing and conservative ingest classification |
+| `src/chronicler/extraction/` | Session and knowledge-source extraction prompts and orchestration |
+| `src/chronicler/vault/` | Obsidian integration, source archiving, additive note updates, deduplication, metrics |
 | `src/chronicler/retrieval/` | Embeddings, indexing, and retrieval |
 | `src/chronicler/chat/` | Textual chat interface |
 | `src/chronicler/reviewer/` | Vault review checks and reporting |
@@ -58,11 +60,11 @@ Quick reference for the repository.
 | `tests/config/` | Settings and configuration tests |
 | `tests/extraction/` | Extraction and prompt tests |
 | `tests/gateway/` | LLM gateway tests |
-| `tests/ingestion/` | Transcript, PDF, and normalization tests |
+| `tests/ingestion/` | Transcript, PDF, source classification, and normalization tests |
 | `tests/models/` | Domain model tests |
 | `tests/retrieval/` | Embeddings and retrieval tests |
 | `tests/reviewer/` | Vault review tests |
-| `tests/vault/` | Obsidian and vault manager tests |
+| `tests/vault/` | Obsidian, source archive, and vault manager tests |
 | `tests/fixtures/` | Sample transcript, PDF, and golden extraction data |
 
 ## Historical Context

@@ -137,6 +137,9 @@ class VaultIndexer:
 
         all_chunks: list[NoteChunk] = []
         for path, content in notes.items():
+            if path.startswith("_Agent/Sources/"):
+                logger.debug("Skipping archived source file: %s", path)
+                continue
             if path.startswith("_Agent/"):
                 logger.debug("Skipping agent file: %s", path)
                 continue

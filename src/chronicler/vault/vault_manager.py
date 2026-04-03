@@ -23,7 +23,7 @@ from chronicler.models.entities import (
     PlotThread,
     ThreadStatus,
 )
-from chronicler.models.extraction import AgentQuestion, ExtractionResult
+from chronicler.models.extraction import AgentQuestion, ExtractionResult, KnowledgeIngestResult
 from chronicler.models.session import SessionRecap
 from chronicler.vault.dedup import find_match
 from chronicler.vault.note_renderer import (
@@ -234,6 +234,122 @@ class VaultManager:
 
         for question in result.questions:
             self.write_question(question)
+
+    def write_source_ingest_result(self, result: KnowledgeIngestResult) -> None:
+        """Write a knowledge-first ingest result into the vault."""
+        for npc in result.npcs:
+            self._write_source_npc(npc)
+        for loc in result.locations:
+            self._write_source_location(loc)
+        for faction in result.factions:
+            self._write_source_faction(faction)
+        for item in result.loot:
+            self._write_source_loot(item)
+
+        open_threads = [t for t in result.plot_threads if t.status == ThreadStatus.OPEN]
+        self.update_open_threads(open_threads)
+
+        if result.session_number is not None and result.recap is not None:
+            self.write_session(
+                result.recap,
+                result.npcs,
+                result.locations,
+                factions=result.factions,
+                loot=result.loot,
+            )
+            existing_npcs = self.cli.find_notes_in_folder("NPCs/")
+            existing_locs = self.cli.find_notes_in_folder("Locations/")
+            self.update_dashboard(
+                session_number=result.session_number,
+                npc_count=len(existing_npcs) + len(result.npcs),
+                location_count=len(existing_locs) + len(result.locations),
+                thread_count=len(open_threads),
+            )
+
+        for question in result.questions:
+            self.write_question(question)
+
+    def _write_source_npc(self, npc: NPC) -> None:
+        existing = self._find_existing(npc.name, "NPCs/")
+        if existing and npc.source_attribution:
+            self._merge_source_update(existing, npc.source_attribution, npc.description)
+            return
+        self.write_npc(npc)
+
+    def _write_source_location(self, loc: Location) -> None:
+        existing = self._find_existing(loc.name, "Locations/")
+        if existing and loc.source_attribution:
+            self._merge_source_update(existing, loc.source_attribution, loc.description)
+            return
+        self.write_location(loc)
+
+    def _write_source_faction(self, faction: Faction) -> None:
+        existing = self._find_existing(faction.name, "Factions/")
+        if existing and faction.source_attribution:
+            self._merge_source_update(existing, faction.source_attribution, faction.description)
+            return
+        self.write_faction(faction)
+
+    def _write_source_loot(self, item: LootItem) -> None:
+        existing = self._find_existing(item.name, "Loot/")
+        if existing and item.source_attribution:
+            self._merge_source_update(existing, item.source_attribution, item.description)
+            return
+        self.write_loot(item)
+
+    def _merge_source_update(
+        self,
+        path: str,
+        source_label: str,
+        description: str | None,
+    ) -> None:
+        """Append or replace a managed source-update section without overwriting the note."""
+        try:
+            existing = self.cli.read(path)
+        except Exception:
+            existing = ""
+
+        managed_header = "## Source Updates"
+        start_marker = "<!-- chronicler:source-updates:start -->"
+        end_marker = "<!-- chronicler:source-updates:end -->"
+        entry_lines = [f"### {source_label}"]
+        if description:
+            entry_lines += ["", description]
+        entry = "\n".join(entry_lines).strip()
+
+        block_pattern = re.compile(
+            rf"{re.escape(start_marker)}\n?(.*)\n?{re.escape(end_marker)}",
+            re.DOTALL,
+        )
+        entry_pattern = re.compile(
+            rf"(?ms)^### {re.escape(source_label)}\n.*?(?=^### |\Z)"
+        )
+
+        if start_marker in existing and end_marker in existing:
+            match = block_pattern.search(existing)
+            if match:
+                block_content = match.group(1).strip()
+                if entry_pattern.search(block_content):
+                    new_block = entry_pattern.sub(entry, block_content).strip()
+                else:
+                    new_block = "\n\n".join(part for part in [block_content, entry] if part).strip()
+                updated = block_pattern.sub(
+                    f"{start_marker}\n{new_block}\n{end_marker}",
+                    existing,
+                )
+                self.cli.create(path, updated)
+                return
+
+        section = "\n\n".join(
+            [
+                managed_header,
+                start_marker,
+                entry,
+                end_marker,
+            ]
+        )
+        updated = existing.rstrip() + "\n\n" + section + "\n"
+        self.cli.create(path, updated)
 
     # ------------------------------------------------------------------
     # Index updates

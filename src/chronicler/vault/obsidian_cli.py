@@ -39,9 +39,11 @@ class ObsidianCLI:
         self,
         vault_name: str,
         binary_path: str = DEFAULT_BINARY,
+        vault_path: Path | None = None,
     ) -> None:
         self.vault_name = vault_name
         self.binary_path = binary_path
+        self.vault_path = vault_path
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -95,6 +97,8 @@ class ObsidianCLI:
 
     def _get_vault_path(self) -> Optional[str]:
         """Return the filesystem path for the configured vault, or None on failure."""
+        if self.vault_path is not None:
+            return str(self.vault_path)
         try:
             raw = self._run(f'vault info=path vault="{self.vault_name}"')
             # The CLI may return a bare path or JSON — normalise.
@@ -104,6 +108,11 @@ class ObsidianCLI:
             return raw or None
         except (ObsidianCLIError, json.JSONDecodeError):
             return None
+
+    def get_vault_path(self) -> Path | None:
+        """Return the filesystem path for the configured vault as a Path."""
+        raw_path = self._get_vault_path()
+        return Path(raw_path) if raw_path else None
 
     # ------------------------------------------------------------------
     # Public API
@@ -144,6 +153,10 @@ class ObsidianCLI:
         Raises:
             ObsidianCLIError: If the note cannot be read.
         """
+        vault_path = self._get_vault_path()
+        if vault_path:
+            note_path = Path(vault_path) / path
+            return note_path.read_text(encoding="utf-8")
         return self._run(f'read path="{path}" vault="{self.vault_name}"')
 
     def append(self, path: str, content: str) -> None:
@@ -207,6 +220,17 @@ class ObsidianCLI:
         Returns:
             List of relative note paths.
         """
+        vault_path = self._get_vault_path()
+        if vault_path:
+            root = Path(vault_path)
+            base = root / folder if folder else root
+            if not base.exists():
+                return []
+            return sorted(
+                str(md_file.relative_to(root))
+                for md_file in base.rglob("*.md")
+            )
+
         if folder:
             raw = self._run(
                 f'files vault="{self.vault_name}" folder="{folder}" format=json'

@@ -26,10 +26,36 @@ class TestObsidianCLI:
                 cli.create("NPCs/Theron.md", "# Theron\n\nA ranger.")
 
     def test_read_note(self, cli):
-        with patch.object(cli, "_run") as mock_run:
+        with (
+            patch.object(cli, "_get_vault_path", return_value=None),
+            patch.object(cli, "_run") as mock_run,
+        ):
             mock_run.return_value = "# Theron\n\nA ranger."
             content = cli.read("NPCs/Theron.md")
             assert content == "# Theron\n\nA ranger."
+
+    def test_read_note_uses_explicit_vault_path_when_provided(self, tmp_path):
+        vault_path = tmp_path / "vault"
+        note_path = vault_path / "NPCs" / "Theron.md"
+        note_path.parent.mkdir(parents=True)
+        note_path.write_text("# Theron\n\nA ranger.", encoding="utf-8")
+        cli = ObsidianCLI(vault_name="Test Vault", vault_path=vault_path)
+
+        content = cli.read("NPCs/Theron.md")
+
+        assert content == "# Theron\n\nA ranger."
+
+    def test_list_files_uses_explicit_vault_path_when_provided(self, tmp_path):
+        vault_path = tmp_path / "vault"
+        (vault_path / "NPCs").mkdir(parents=True)
+        (vault_path / "NPCs" / "Theron.md").write_text("x", encoding="utf-8")
+        (vault_path / "Locations").mkdir(parents=True)
+        (vault_path / "Locations" / "Laguna Nera.md").write_text("x", encoding="utf-8")
+        cli = ObsidianCLI(vault_name="Test Vault", vault_path=vault_path)
+
+        files = cli.list_files()
+
+        assert files == ["Locations/Laguna Nera.md", "NPCs/Theron.md"]
 
     def test_search_returns_paths(self, cli):
         with patch.object(cli, "_run") as mock_run:
@@ -51,7 +77,10 @@ class TestObsidianCLI:
             assert "property:set" in args
 
     def test_list_files(self, cli):
-        with patch.object(cli, "_run") as mock_run:
+        with (
+            patch.object(cli, "_get_vault_path", return_value=None),
+            patch.object(cli, "_run") as mock_run,
+        ):
             mock_run.return_value = '["NPCs/Theron.md", "Sessions/Session-001.md"]'
             files = cli.list_files()
             assert len(files) == 2

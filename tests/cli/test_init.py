@@ -36,7 +36,7 @@ class TestInitCommand:
             result = runner.invoke(app, ["init"])
 
         assert result.exit_code == 0
-        mock_cli_cls.assert_called_once_with("TestVault")
+        mock_cli_cls.assert_called_once_with("TestVault", vault_path=mock_settings.vault_path)
         mock_vm_cls.assert_called_once_with(mock_cli_cls.return_value)
         mock_vm.init_vault.assert_called_once()
 

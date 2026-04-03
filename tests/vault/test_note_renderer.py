@@ -80,6 +80,17 @@ class TestRenderNPC:
         assert 'first_appeared: "[[Session-001]]"' in md
         assert 'affiliations: ["[[The Guild]]"]' in md
 
+    def test_render_npc_with_source_attribution_without_session(self):
+        npc = NPC(
+            name="Theron",
+            source_attribution="DM Jared notes",
+            description="Mentioned in background material.",
+        )
+        md = render_npc_note(npc)
+        assert "source_attribution: DM Jared notes" in md
+        assert "**Source Attribution:** DM Jared notes" in md
+        assert "**First Appeared:**" not in md
+
 
 class TestFrontmatterNormalization:
     def test_frontmatter_does_not_double_wrap_existing_reference_wikilinks(self):
@@ -134,6 +145,16 @@ class TestRenderLocation:
         md = render_location_note(loc)
         assert 'first_appeared: "[[Session-022]]"' in md
         assert 'connected_to: ["[[Underground Tunnels]]"]' in md
+
+    def test_render_location_with_source_attribution_without_session(self):
+        loc = Location(
+            name="The Marsh Chapel",
+            source_attribution="DM Jared notes",
+        )
+        md = render_location_note(loc)
+        assert "source_attribution: DM Jared notes" in md
+        assert "**Source Attribution:** DM Jared notes" in md
+        assert "**First Appeared:**" not in md
 
 
 class TestRenderFaction:

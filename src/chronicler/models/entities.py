@@ -48,6 +48,8 @@ class Location(BaseModel):
     source_attribution: str | None = None
     description: str | None = None
     aliases: list[str] = Field(default_factory=list)
+    parent_location: str | None = None
+    adjacent_to: list[str] = Field(default_factory=list)
     connected_to: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 

@@ -147,7 +147,7 @@ class VaultManager:
         if existing and not update_existing:
             return
         path = existing or f"Locations/{loc.name}.md"
-        self.cli.create(path, render_location_note(loc))
+        self.cli.create(path, render_location_note(loc, child_locations=self._find_child_locations(loc.name)))
 
     def write_faction(self, faction: Faction, update_existing: bool = False) -> None:
         """Create (or optionally update) a Faction note in ``Factions/``."""
@@ -279,9 +279,20 @@ class VaultManager:
     def _write_source_location(self, loc: Location) -> None:
         existing = self._find_existing(loc.name, "Locations/")
         if existing and loc.source_attribution:
-            self._merge_source_update(existing, loc.source_attribution, loc.description)
-            return
-        self.write_location(loc)
+            try:
+                existing_content = self.cli.read(existing)
+            except Exception:
+                existing_content = ""
+            updated = self._apply_source_update(existing_content, loc.source_attribution, loc.description)
+            updated = self._apply_location_relationships(
+                updated,
+                loc,
+                child_locations=self._find_child_locations(loc.name),
+            )
+            self.cli.create(existing, updated)
+        else:
+            self.write_location(loc)
+        self._sync_parent_location_relationships(loc)
 
     def _write_source_faction(self, faction: Faction) -> None:
         existing = self._find_existing(faction.name, "Factions/")
@@ -308,6 +319,16 @@ class VaultManager:
             existing = self.cli.read(path)
         except Exception:
             existing = ""
+        updated = self._apply_source_update(existing, source_label, description)
+        self.cli.create(path, updated)
+
+    def _apply_source_update(
+        self,
+        existing: str,
+        source_label: str,
+        description: str | None,
+    ) -> str:
+        """Return note content with an updated managed source-update section."""
 
         managed_header = "## Source Updates"
         start_marker = "<!-- chronicler:source-updates:start -->"
@@ -337,8 +358,7 @@ class VaultManager:
                     f"{start_marker}\n{new_block}\n{end_marker}",
                     existing,
                 )
-                self.cli.create(path, updated)
-                return
+                return updated
 
         section = "\n\n".join(
             [
@@ -348,8 +368,89 @@ class VaultManager:
                 end_marker,
             ]
         )
-        updated = existing.rstrip() + "\n\n" + section + "\n"
-        self.cli.create(path, updated)
+        return existing.rstrip() + "\n\n" + section + "\n"
+
+    def _merge_location_relationships(self, path: str, loc: Location, child_locations: list[str] | None = None) -> None:
+        """Append or replace a managed location-relationship section."""
+        try:
+            existing = self.cli.read(path)
+        except Exception:
+            existing = ""
+        updated = self._apply_location_relationships(existing, loc, child_locations=child_locations)
+        if updated != existing:
+            self.cli.create(path, updated)
+
+    def _apply_location_relationships(
+        self,
+        existing: str,
+        loc: Location,
+        child_locations: list[str] | None = None,
+    ) -> str:
+        """Return note content with an updated managed location-relationship section."""
+
+        adjacency_links = loc.adjacent_to or loc.connected_to
+        relationship_lines: list[str] = []
+        if loc.parent_location:
+            relationship_lines.append(f"**Contained In:** [[{loc.parent_location}]]")
+        if adjacency_links:
+            relationship_lines.append(f"**Adjacent To:** {', '.join(f'[[{name}]]' for name in adjacency_links)}")
+        if child_locations:
+            relationship_lines.append(f"**Contains:** {', '.join(f'[[{name}]]' for name in child_locations)}")
+
+        if not relationship_lines:
+            return existing
+
+        managed_header = "## Location Relationships"
+        start_marker = "<!-- chronicler:location-relationships:start -->"
+        end_marker = "<!-- chronicler:location-relationships:end -->"
+        block = "\n".join(relationship_lines)
+        section = "\n\n".join([managed_header, start_marker, block, end_marker])
+        pattern = re.compile(
+            rf"{re.escape(managed_header)}\n\n{re.escape(start_marker)}\n.*?\n{re.escape(end_marker)}",
+            re.DOTALL,
+        )
+
+        if start_marker in existing and end_marker in existing:
+            return pattern.sub(section, existing)
+        return existing.rstrip() + "\n\n" + section + "\n"
+
+    def _sync_parent_location_relationships(self, loc: Location) -> None:
+        """Update the location itself and its parent note with navigable relationship links."""
+        if not loc.parent_location:
+            return
+
+        parent_path = self._find_existing(loc.parent_location, "Locations/")
+        if not parent_path:
+            return
+
+        parent_loc = Location(
+            name=loc.parent_location,
+            source_attribution="Derived location relationship",
+        )
+        self._merge_location_relationships(parent_path, parent_loc, child_locations=self._find_child_locations(loc.parent_location, pending_children=[loc.name]))
+
+    def _find_child_locations(self, parent_name: str, pending_children: list[str] | None = None) -> list[str]:
+        """Return child locations whose frontmatter points at *parent_name*."""
+        notes = self.cli.find_notes_in_folder("Locations/")
+        children: list[str] = []
+        for note_path in notes:
+            try:
+                content = self.cli.read(note_path)
+            except Exception:
+                continue
+            fm = self._parse_frontmatter(content)
+            parent_value = fm.get("parent_location")
+            body_matches_parent = f"**Contained In:** [[{parent_name}]]" in content
+            if parent_value == f"[[{parent_name}]]" or parent_value == parent_name or body_matches_parent:
+                name = fm.get("name")
+                if name:
+                    children.append(name)
+
+        for name in pending_children or []:
+            if name not in children:
+                children.append(name)
+
+        return sorted(children)
 
     # ------------------------------------------------------------------
     # Index updates

@@ -156,6 +156,20 @@ class TestRenderLocation:
         assert "**Source Attribution:** DM Jared notes" in md
         assert "**First Appeared:**" not in md
 
+    def test_render_location_includes_hierarchy_and_adjacency_links(self):
+        loc = Location(
+            name="Silkmarket District",
+            source_attribution="DM Jared notes",
+            parent_location="Laguna Nera",
+            adjacent_to=["Harbor District", "Temple Ward"],
+        )
+        md = render_location_note(loc, child_locations=["Market Square", "Old Mint"])
+        assert 'parent_location: "[[Laguna Nera]]"' in md
+        assert 'adjacent_to: ["[[Harbor District]]", "[[Temple Ward]]"]' in md
+        assert "**Contained In:** [[Laguna Nera]]" in md
+        assert "**Adjacent To:** [[Harbor District]], [[Temple Ward]]" in md
+        assert "**Contains:** [[Market Square]], [[Old Mint]]" in md
+
 
 class TestRenderFaction:
     def test_render_faction(self):

@@ -33,3 +33,5 @@ updated: 2026-04-03
 - 2026-04-03 (vault): `vault_name` and `CHRONICLER_VAULT_PATH` can point at different vault locations in real usage; filesystem-backed operations must consistently honor the configured path or live writes will split across two vaults.
 - 2026-04-03 (ingest): Dedup-by-skip is wrong for knowledge imports into existing notes; source-driven updates need an additive managed section so imported lore enriches notes instead of being silently dropped.
 - 2026-04-03 (ingest): `source_attribution` inference must only trust explicit attribution-style lines near the top of a source; scraping arbitrary prose for words like "from" produces bad provenance.
+- 2026-04-03 (locations): Location hierarchy needs two passes: prompt for `parent_location`, then a deterministic fallback that promotes explicit phrases like "district in Laguna Nera" when the model only returns a generic connection.
+- 2026-04-03 (locations): Parent `Contains` links cannot rely on frontmatter alone once curated notes already exist; relationship discovery must also scan managed body sections so repeated imports accumulate children instead of replacing them.

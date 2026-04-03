@@ -1,6 +1,7 @@
 """Extraction flow for non-transcript source documents."""
 
 import json
+import re
 
 from chronicler.extraction.extractor import (
     _evaluate_quality,
@@ -72,6 +73,31 @@ def _apply_source_provenance_defaults(
     return data
 
 
+def _infer_parent_location_from_description(location: dict) -> None:
+    """Promote explicit containment phrases into ``parent_location`` when missing."""
+    if location.get("parent_location"):
+        return
+
+    description = location.get("description") or ""
+    match = re.search(
+        r"\b(?:in|within)\s+([A-Z][A-Za-z' -]+?)(?:\s+(?:containing|contains|with|near)\b|[.,]|$)",
+        description,
+    )
+    if not match:
+        return
+
+    candidate = match.group(1).strip()
+    if candidate and candidate != location.get("name"):
+        location["parent_location"] = candidate
+
+
+def _normalize_location_relationships(data: dict) -> dict:
+    """Fill in obvious explicit location hierarchy links that the model omitted."""
+    for location in data.get("locations", []):
+        _infer_parent_location_from_description(location)
+    return data
+
+
 async def extract_source_document(
     document: SourceDocument,
     context: ContextBundle,
@@ -103,6 +129,7 @@ async def extract_source_document(
         source_attribution=source_attribution,
         document=document,
     )
+    data = _normalize_location_relationships(data)
     entities = _RawSourceEntities.model_validate(data)
 
     recap = None

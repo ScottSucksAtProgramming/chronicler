@@ -203,6 +203,8 @@ Extract campaign knowledge from this material.
 - Do NOT invent session provenance for unanchored material.
 - If a source attribution is apparent from the document, preserve it in `source_attribution`.
 - If the material lacks enough provenance to safely ground important extracted facts, add a question asking the user for source attribution.
+- For locations, use `parent_location` for containment (district in city, city in region) and `adjacent_to` for neighbor-style map links.
+- Only include location relationships when the source is explicit enough to be reliable. If the document leaves unclear geography, add a question instead of guessing.
 - Use null for session provenance fields when the source is unanchored and the document does not establish a session.
 - {session_rule}
 
@@ -229,6 +231,8 @@ Return a JSON object with this exact structure:
       "source_attribution": "string or null",
       "description": "string",
       "aliases": ["string"],
+      "parent_location": "string or null",
+      "adjacent_to": ["string"],
       "connected_to": ["string"],
       "tags": ["string"]
     }}

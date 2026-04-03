@@ -87,6 +87,8 @@ MOCK_SOURCE_EXTRACTION_RESPONSE = json.dumps({
             "source_attribution": "DM Jared notes",
             "description": "A dense forest.",
             "aliases": ["dark forest"],
+            "parent_location": "Northern Reach",
+            "adjacent_to": ["Hunter's Road"],
             "connected_to": [],
             "tags": [],
         }
@@ -126,6 +128,8 @@ MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE = json.dumps({
             "source_attribution": None,
             "description": "A dense forest.",
             "aliases": ["dark forest"],
+            "parent_location": None,
+            "adjacent_to": [],
             "connected_to": [],
             "tags": [],
         }
@@ -141,6 +145,27 @@ MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE = json.dumps({
             "summary": "A merchant went missing in the forest.",
         }
     ],
+    "questions": [],
+})
+
+MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE = json.dumps({
+    "npcs": [],
+    "locations": [
+        {
+            "name": "Mist Alley",
+            "first_appeared": None,
+            "source_attribution": "DM Jared notes",
+            "description": "A district in Laguna Nera containing the Perfumed Chapel and Redcap's Remedies.",
+            "aliases": [],
+            "parent_location": None,
+            "adjacent_to": [],
+            "connected_to": ["Laguna Nera"],
+            "tags": ["district"],
+        }
+    ],
+    "factions": [],
+    "loot": [],
+    "plot_threads": [],
     "questions": [],
 })
 
@@ -256,6 +281,8 @@ class TestExtractSourceDocument:
         assert len(result.npcs) == 1
         assert result.npcs[0].first_appeared is None
         assert result.npcs[0].source_attribution == "DM Jared notes"
+        assert result.locations[0].parent_location == "Northern Reach"
+        assert result.locations[0].adjacent_to == ["Hunter's Road"]
         assert result.quality_score is not None
 
     @pytest.mark.asyncio
@@ -323,3 +350,66 @@ class TestExtractSourceDocument:
         assert result.questions
         assert "source attribution" in result.questions[0].question.lower()
         assert result.npcs[0].source_attribution == "Imported source: legacy_note.md"
+
+    @pytest.mark.asyncio
+    async def test_extract_source_prompt_requests_questions_for_uncertain_geography(self):
+        context = ContextBundle(session_number=0)
+        gateway = MagicMock()
+        gateway.complete = AsyncMock(
+            side_effect=[
+                MagicMock(content=MOCK_SOURCE_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)),
+                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+            ]
+        )
+        source_document = SourceDocument(
+            source_path=Path("tests/fixtures/imports/legacy_note.md"),
+            original_filename="legacy_note.md",
+            media_type="text/markdown",
+            extracted_text="The Silkmarket District lies within Laguna Nera near Harbor District.",
+            classification=SourceClassification(
+                document_type=DocumentType.LEGACY_NOTE,
+                confidence=0.95,
+            ),
+        )
+
+        await extract_source_document(
+            document=source_document,
+            context=context,
+            gateway=gateway,
+            model="test-model",
+        )
+
+        prompt_text = gateway.complete.call_args_list[0][0][0].messages[0]["content"]
+        assert "parent_location" in prompt_text
+        assert "adjacent_to" in prompt_text
+        assert "unclear geography" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_extract_source_infers_parent_location_from_explicit_description(self):
+        context = ContextBundle(session_number=0)
+        gateway = MagicMock()
+        gateway.complete = AsyncMock(
+            side_effect=[
+                MagicMock(content=MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE, usage=MagicMock(total_tokens=500)),
+                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+            ]
+        )
+        source_document = SourceDocument(
+            source_path=Path("tests/fixtures/imports/legacy_note.md"),
+            original_filename="legacy_note.md",
+            media_type="text/markdown",
+            extracted_text="Mist Alley is a district in Laguna Nera.",
+            classification=SourceClassification(
+                document_type=DocumentType.LEGACY_NOTE,
+                confidence=0.95,
+            ),
+        )
+
+        result = await extract_source_document(
+            document=source_document,
+            context=context,
+            gateway=gateway,
+            model="test-model",
+        )
+
+        assert result.locations[0].parent_location == "Laguna Nera"

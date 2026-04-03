@@ -48,11 +48,13 @@ _REFERENCE_SCALAR_KEYS = {
     "found_in",
     "held_by",
     "introduced_in",
+    "parent_location",
     "resolved_in",
 }
 
 _REFERENCE_LIST_KEYS = {
     "affiliations",
+    "adjacent_to",
     "connected_to",
     "known_members",
     "related_entities",
@@ -253,14 +255,17 @@ def render_npc_note(npc: NPC) -> str:
 # ---------------------------------------------------------------------------
 
 
-def render_location_note(loc: Location) -> str:
+def render_location_note(loc: Location, child_locations: list[str] | None = None) -> str:
     """Render a Location entity as an Obsidian markdown note."""
+    adjacency_links = loc.adjacent_to or loc.connected_to
     fm = _frontmatter(
         type="location",
         name=loc.name,
         first_appeared=loc.first_appeared,
         source_attribution=loc.source_attribution,
         aliases=loc.aliases,
+        parent_location=loc.parent_location,
+        adjacent_to=adjacency_links,
         connected_to=loc.connected_to,
         tags=loc.tags,
     )
@@ -277,8 +282,14 @@ def render_location_note(loc: Location) -> str:
     if loc.aliases:
         body_lines.append(f"**Aliases:** {', '.join(loc.aliases)}")
 
-    if loc.connected_to:
-        body_lines.append(f"**Connected To:** {wikify(loc.connected_to)}")
+    if loc.parent_location:
+        body_lines.append(f"**Contained In:** {wikify(loc.parent_location)}")
+
+    if adjacency_links:
+        body_lines.append(f"**Adjacent To:** {wikify(adjacency_links)}")
+
+    if child_locations:
+        body_lines.append(f"**Contains:** {wikify(child_locations)}")
 
     if loc.description:
         body_lines += ["", "## Description", "", loc.description]

@@ -13,6 +13,8 @@
 - source archive writer and retrieval exclusion
 - additive updates for existing entity notes via managed source-update sections
 - path-aware vault operations that honor `CHRONICLER_VAULT_PATH`
+- explicit location graph support for `parent_location` and `adjacent_to`
+- map-style note rendering with derived `Contains` links and question generation for uncertain geography
 
 **Verification:**
 

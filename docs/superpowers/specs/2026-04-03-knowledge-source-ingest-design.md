@@ -18,6 +18,8 @@ Chronicler supports knowledge-first ingest for non-transcript source materials. 
 - If useful provenance is missing, Chronicler writes an agent question rather than guessing.
 - Existing entity notes are updated additively through a managed `## Source Updates` section rather than being overwritten.
 - Raw archived sources are excluded from retrieval indexing.
+- Location relationships use two explicit link types: containment (`parent_location`) and adjacency (`adjacent_to`).
+- Chronicler only writes location relationships it is confident about; unclear geography becomes agent questions.
 
 ## Parsing And Routing
 
@@ -25,6 +27,7 @@ Chronicler supports knowledge-first ingest for non-transcript source materials. 
 - `.pdf` files first try PLAUD parsing, then fall back to generic `pdfplumber` text extraction.
 - Smart routing is based on classified intent, not just file suffix.
 - Ambiguous inputs prompt the user for direction instead of silently guessing.
+- After model extraction, explicit containment phrases in location descriptions (for example, "a district in Laguna Nera") can be promoted into `parent_location` as a deterministic fallback when the model omits the hierarchy field.
 
 ## Vault Behavior
 
@@ -32,6 +35,11 @@ Chronicler supports knowledge-first ingest for non-transcript source materials. 
 - Archived metadata records classification, session anchor, and source attribution.
 - Filesystem-backed vault operations must honor `CHRONICLER_VAULT_PATH` consistently; `vault_name` is not assumed to resolve to the same filesystem location.
 - Knowledge-first imports update existing notes additively when a matching entity already exists.
+- Location notes expose navigable geography in both frontmatter and body:
+  - `Contained In` from `parent_location`
+  - `Adjacent To` from `adjacent_to`
+  - `Contains` derived by scanning known locations whose `parent_location` points at the current note
+- For legacy curated notes that do not yet carry relationship frontmatter, `Contains` derivation also scans managed location-relationship sections so repeated imports keep accumulating child links.
 
 ## Remaining Deferred Scope
 

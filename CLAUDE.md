@@ -37,6 +37,9 @@ dnd_notes_organizaer/
       vault/
         __init__.py
         obsidian_cli.py  — ObsidianCLI, ObsidianCLIError (low-level CLI wrapper)
+      retrieval/
+        __init__.py
+        embeddings.py    — EmbeddingClient, EmbeddingError (LM Studio httpx client)
   tests/
     conftest.py          — shared fixtures (settings, tmp_vault)
     cli/
@@ -48,6 +51,9 @@ dnd_notes_organizaer/
     vault/
       __init__.py
       test_obsidian_cli.py
+    retrieval/
+      __init__.py
+      test_embeddings.py
   docs/
     interview-notes.md
     superpowers/

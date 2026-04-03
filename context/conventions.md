@@ -52,6 +52,7 @@ updated: 2026-04-02
 - **Integration tests:** Marked with `@pytest.mark.integration`. Hit real services.
 - **Golden fixtures:** Hand-labeled expected output from real sessions. Stored in `tests/fixtures/`.
 - **User-style testing:** Manual QA after every milestone. Stories defined in the milestone plan.
+- **Default completion workflow:** Before reporting back on a fix or feature, reproduce the issue, add or update regressions, run focused tests, run the broader relevant suite, and when the change affects the live vault workflow, validate it with the installed `chronicler` CLI against the real vault before claiming it is fixed.
 - **Shared fixtures** live in `tests/conftest.py` (settings, tmp_vault).
 
 ## LLM Gateway Conventions

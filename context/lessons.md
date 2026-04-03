@@ -26,3 +26,4 @@ updated: 2026-04-02
 - 2026-04-02 (milestone-6): Player characters work better as first-class `Party/` notes, but keeping a fallback read path from `_Agent/Memory/player-characters.md` avoids regressing older context-bundle and memory tests during the transition.
 - 2026-04-02 (repo): A package rename is not finished when imports compile. Repo polish also needs aligned ignore rules, maintenance docs, and generic top-level documentation so the remote repository reflects the supported public surface.
 - 2026-04-03 (vault-links): Obsidian link targets must canonicalize to actual note path stems, not display-style frontmatter names; quote-style and accent variants should normalize onto the filename so wiki links resolve to the real notes.
+- 2026-04-03 (workflow): For live-vault features, code-level tests are not sufficient; the completion bar is focused regressions, broader suite coverage, and one installed-CLI validation against the real vault before reporting success.

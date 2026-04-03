@@ -341,6 +341,77 @@ class TestImproveVault:
         assert "Rook" in question_content
         assert "Session-003.md" in question_content
 
+    def test_improve_creates_high_signal_location_relationship_question(self):
+        snapshot = {
+            "Locations/Venom Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Venom Alley\n"
+                "---\n"
+                "# Venom Alley\n\n"
+                "## Description\n\n"
+                "A dangerous quarter near the Floating Market and Mist Alley.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 1
+        question_path, question_content = next(
+            call.args
+            for call in cli.create.call_args_list
+            if call.args[0].startswith("_Agent/Questions/")
+        )
+        assert "location_relationship_missing" in question_content
+        assert "Venom Alley" in question_content
+        assert "nearby locations" in question_content.lower()
+        assert question_path.startswith("_Agent/Questions/")
+
+    def test_improve_does_not_repeat_existing_location_relationship_question(self):
+        snapshot = {
+            "Locations/Venom Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Venom Alley\n"
+                "---\n"
+                "# Venom Alley\n\n"
+                "## Description\n\n"
+                "A district or notable area within Laguna Nera.\n"
+            ),
+            "_Agent/Questions/venom-alley-which-larger-location-does-venom-alley-belo.md": (
+                "---\n"
+                "type: agent-question\n"
+                "priority: medium\n"
+                "---\n\n"
+                "# Which larger location does Venom Alley belong to?\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 0
+
+    def test_improve_caps_location_relationship_questions_per_run(self):
+        snapshot = {
+            f"Locations/District {i}.md": (
+                "---\n"
+                "type: location\n"
+                f"name: District {i}\n"
+                "---\n"
+                f"# District {i}\n\n"
+                "## Description\n\n"
+                "A dangerous quarter near the Floating Market and Mist Alley.\n"
+            )
+            for i in range(1, 8)
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 5
+
     def test_improve_uses_agent_memory_aliases_when_unambiguous(self):
         snapshot = {
             "_Agent/Memory/entity-aliases.md": (

@@ -46,6 +46,8 @@ _REFERENCE_LIST_KEYS = {
     "locations",
 }
 
+_MAX_LOCATION_RELATIONSHIP_QUESTIONS = 5
+
 
 @dataclass
 class ImproveReport:
@@ -126,6 +128,14 @@ def improve_vault(cli) -> ImproveReport:
             report.changed_count += 1
             report.changed_files.append(path)
         updated_snapshot[path] = updated
+
+    existing_question_paths = set(snapshot.keys()) | set(report.question_files)
+    location_questions = _collect_location_relationship_questions(updated_snapshot, existing_question_paths)
+    for question_path, source_path, question in location_questions:
+        cli.create(question_path, _render_question(question, source_path))
+        report.question_count += 1
+        report.question_files.append(question_path)
+        existing_question_paths.add(question_path)
 
     return report
 
@@ -330,6 +340,81 @@ def _sanitize_location_body(body: str) -> str:
     description_parts = [part.strip() for part in parts[1:] if part.strip()]
     merged_description = "\n\n".join(description_parts)
     return prefix.rstrip() + "\n\n## Description\n\n" + merged_description + "\n"
+
+
+def _collect_location_relationship_questions(
+    snapshot: dict[str, str],
+    existing_question_paths: set[str],
+) -> list[tuple[str, str, AgentQuestion]]:
+    """Create high-signal location relationship questions with dedupe and a run cap."""
+    queued: list[tuple[str, str, AgentQuestion]] = []
+    for path, content in snapshot.items():
+        if not path.startswith("Locations/"):
+            continue
+        frontmatter = _parse_frontmatter(content)
+        body = _strip_frontmatter(content)
+        question = _location_relationship_question(path, frontmatter, body)
+        if question is None:
+            continue
+        question_path = _question_path(path, question.question)
+        if _question_exists(question_path, existing_question_paths):
+            continue
+        queued.append((question_path, path, question))
+        if len(queued) >= _MAX_LOCATION_RELATIONSHIP_QUESTIONS:
+            break
+    return queued
+
+
+def _question_exists(question_path: str, existing_paths: set[str]) -> bool:
+    basename = Path(question_path).name
+    return any(Path(path).name == basename for path in existing_paths if "Questions" in path)
+
+
+def _location_relationship_question(path: str, frontmatter: dict, body: str) -> AgentQuestion | None:
+    """Return a deterministic relationship question for high-signal unresolved location cues."""
+    name = _canonical_name(path, frontmatter)
+    description = _extract_section(body, "Description") or body
+    plain_description = re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", r"\1", description)
+    parent = frontmatter.get("parent_location")
+    nearby = frontmatter.get("adjacent_to")
+
+    if not parent and re.search(r"\b(?:district|area|quarter|ward|location|notable area)\b.*\b(?:within|in)\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which larger location does {name} belong to?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note strongly implies the location belongs to a larger place, but the deterministic improver could not resolve it safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    if not nearby and re.search(r"\b(?:near|nearby|adjacent|between|next to)\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which nearby locations should be recorded for {name}?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note suggests nearby-location relationships, but the deterministic improver could not resolve them safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    if not re.search(r"\*\*Contains:\*\*", body) and re.search(r"\bcontains\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which locations belong inside {name}?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note suggests child locations, but the deterministic improver could not resolve them safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    return None
 
 
 def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:

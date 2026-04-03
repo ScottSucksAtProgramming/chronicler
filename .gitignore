@@ -39,3 +39,8 @@ transcripts/
 # OS
 .DS_Store
 Thumbs.db
+
+# PLAUD source files (large, not code)
+04-01 Summary*
+# Junk files from CLI stdout noise bug
+2026-*

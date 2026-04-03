@@ -30,6 +30,7 @@ updated: 2026-04-03
 - 2026-04-03 (ingest): Unanchored source imports need separate `source_attribution` provenance instead of fake `Session-NNN` values; missing provenance should become a question, not a guess.
 - 2026-04-03 (ingest): Source PDF parsing cannot assume PLAUD structure; a generic pdfplumber text fallback is required so older PDFs can still enter the knowledge-ingest path.
 - 2026-04-03 (ingest): Knowledge-first source ingest needs its own result model and vault write path; reusing the session-only extraction result forces bad assumptions about recaps and session anchoring.
+- 2026-04-03 (ingest): Source-material ingest should archive provenance in the vault while keeping raw artifacts out of retrieval so answers stay grounded in curated notes instead of attachment dumps.
 - 2026-04-03 (vault): `vault_name` and `CHRONICLER_VAULT_PATH` can point at different vault locations in real usage; filesystem-backed operations must consistently honor the configured path or live writes will split across two vaults.
 - 2026-04-03 (ingest): Dedup-by-skip is wrong for knowledge imports into existing notes; source-driven updates need an additive managed section so imported lore enriches notes instead of being silently dropped.
 - 2026-04-03 (ingest): `source_attribution` inference must only trust explicit attribution-style lines near the top of a source; scraping arbitrary prose for words like "from" produces bad provenance.

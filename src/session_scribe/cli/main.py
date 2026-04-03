@@ -259,7 +259,62 @@ def init() -> None:
 @app.command()
 def chat() -> None:
     """Open interactive campaign Q&A chat."""
-    console.print("[yellow]Chat TUI not yet implemented.[/yellow]")
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        raise typer.Exit(1)
+
+    if not settings.vault_name:
+        console.print(
+            "[red]Error: SCRIBE_VAULT_NAME is not set.[/red]\n"
+            "Set the vault name in your .env file or environment:\n"
+            "  export SCRIBE_VAULT_NAME='My Campaign Vault'"
+        )
+        raise typer.Exit(1)
+
+    from session_scribe.retrieval.embeddings import EmbeddingClient
+
+    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+    if not embed_client.health_check():
+        console.print(
+            "[red]Error: Cannot connect to LM Studio at "
+            f"{settings.lm_studio_base_url}.[/red]\n"
+            "Make sure LM Studio is running with an embedding model loaded."
+        )
+        raise typer.Exit(1)
+
+    import chromadb
+
+    chroma_client = chromadb.PersistentClient(
+        path=str(settings.vault_path / ".scribe" / "chromadb")
+    )
+    collection = chroma_client.get_or_create_collection("vault_notes")
+
+    if collection.count() == 0:
+        console.print(
+            "[yellow]Warning: The vault index is empty. "
+            "Run [bold]scribe reindex[/bold] first to index your notes.[/yellow]"
+        )
+        raise typer.Exit(1)
+
+    from session_scribe.chat.app import ChatApp
+    from session_scribe.gateway.llm_gateway import LLMGateway
+    from session_scribe.retrieval.retrieval import RetrievalLayer
+
+    layer = RetrievalLayer(collection, embed_client)
+    gateway = LLMGateway(settings)
+
+    model = (
+        settings.kimi_model or "kimi-default"
+        if settings.llm_provider == "kimi"
+        else settings.nanogpt_model
+    )
+
+    ChatApp(retrieval=layer, gateway=gateway, model=model).run()
+
+    asyncio.run(gateway.close())
+    asyncio.run(embed_client.close())
 
 
 @app.command()
@@ -408,7 +463,48 @@ def ask() -> None:
 @app.command()
 def reindex() -> None:
     """Rebuild the vector store index from current vault contents."""
-    console.print("[yellow]Reindexing not yet implemented.[/yellow]")
+    try:
+        settings = Settings()
+    except Exception as exc:
+        console.print(f"[red]Configuration error: {exc}[/red]")
+        raise typer.Exit(1)
+
+    if not settings.vault_name:
+        console.print(
+            "[red]Error: SCRIBE_VAULT_NAME is not set.[/red]\n"
+            "Set the vault name in your .env file or environment:\n"
+            "  export SCRIBE_VAULT_NAME='My Campaign Vault'"
+        )
+        raise typer.Exit(1)
+
+    from session_scribe.retrieval.embeddings import EmbeddingClient
+    from session_scribe.retrieval.indexer import VaultIndexer
+
+    cli = ObsidianCLI(settings.vault_name)
+    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+
+    if not embed_client.health_check():
+        console.print(
+            "[red]Error: Cannot connect to LM Studio at "
+            f"{settings.lm_studio_base_url}.[/red]\n"
+            "Make sure LM Studio is running with an embedding model loaded."
+        )
+        raise typer.Exit(1)
+
+    import chromadb
+
+    chroma_client = chromadb.PersistentClient(
+        path=str(settings.vault_path / ".scribe" / "chromadb")
+    )
+    collection = chroma_client.get_or_create_collection("vault_notes")
+
+    indexer = VaultIndexer(cli, embed_client, collection)
+
+    console.print("[cyan]Indexing vault notes...[/cyan]")
+    chunk_count = asyncio.run(indexer.index_vault())
+    console.print(f"[green]Indexing complete:[/green] {chunk_count} chunks indexed.")
+
+    asyncio.run(embed_client.close())
 
 
 @app.command()

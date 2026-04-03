@@ -4,6 +4,7 @@
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -107,12 +108,32 @@ class VaultIndexer:
     # Main entry point
     # ------------------------------------------------------------------
 
-    async def index_vault(self) -> int:
+    @staticmethod
+    def _read_vault_filesystem(vault_path: str) -> dict[str, str]:
+        """Read all .md files from the vault filesystem directly (no CLI)."""
+        result: dict[str, str] = {}
+        vault = Path(vault_path)
+        for md_file in vault.rglob("*.md"):
+            rel_path = str(md_file.relative_to(vault))
+            try:
+                result[rel_path] = md_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+        return result
+
+    async def index_vault(self, vault_path: str | None = None) -> int:
         """Index all vault notes into ChromaDB.
+
+        Args:
+            vault_path: Optional filesystem path to the vault. If provided,
+                reads files directly (fast). Otherwise falls back to CLI.
 
         Returns the total number of chunks upserted.
         """
-        notes: dict[str, str] = self._cli.read_all_notes()
+        if vault_path:
+            notes = self._read_vault_filesystem(vault_path)
+        else:
+            notes = self._cli.read_all_notes()
 
         all_chunks: list[NoteChunk] = []
         for path, content in notes.items():

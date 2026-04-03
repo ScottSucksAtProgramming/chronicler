@@ -501,10 +501,8 @@ def reindex() -> None:
     indexer = VaultIndexer(cli, embed_client, collection)
 
     console.print("[cyan]Indexing vault notes...[/cyan]")
-    chunk_count = asyncio.run(indexer.index_vault())
+    chunk_count = asyncio.run(indexer.index_vault(vault_path=str(settings.vault_path)))
     console.print(f"[green]Indexing complete:[/green] {chunk_count} chunks indexed.")
-
-    asyncio.run(embed_client.close())
 
 
 @app.command()

@@ -44,3 +44,6 @@ Thumbs.db
 04-01 Summary*
 # ChromaDB local storage
 .scribe/
+
+# Local git worktrees
+.worktrees/

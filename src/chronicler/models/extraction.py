@@ -83,3 +83,17 @@ class ExtractionResult(BaseModel):
     recap: SessionRecap
     questions: list[AgentQuestion] = Field(default_factory=list)
     quality_score: QualityScore | None = None
+
+
+class KnowledgeIngestResult(BaseModel):
+    """Extraction output for a general source document import."""
+
+    session_number: int | None = None
+    npcs: list[NPC]
+    locations: list[Location]
+    factions: list[Faction]
+    loot: list[LootItem]
+    plot_threads: list[PlotThread]
+    recap: SessionRecap | None = None
+    questions: list[AgentQuestion] = Field(default_factory=list)
+    quality_score: QualityScore | None = None

@@ -40,9 +40,14 @@ class TestNPC:
         with pytest.raises(Exception):
             NPC(first_appeared="Session-001")
 
-    def test_npc_requires_first_appeared(self):
+    def test_npc_requires_session_or_source_provenance(self):
         with pytest.raises(Exception):
             NPC(name="Theron")
+
+    def test_npc_can_use_source_attribution_without_session(self):
+        npc = NPC(name="Theron", source_attribution="DM Jared notes")
+        assert npc.first_appeared is None
+        assert npc.source_attribution == "DM Jared notes"
 
     def test_invalid_status_raises(self):
         with pytest.raises(Exception):
@@ -82,7 +87,7 @@ class TestFaction:
         with pytest.raises(Exception):
             Faction(first_appeared="Session-022")
 
-    def test_faction_requires_first_appeared(self):
+    def test_faction_requires_session_or_source_provenance(self):
         with pytest.raises(Exception):
             Faction(name="Test Faction")
 
@@ -100,7 +105,7 @@ class TestLootItem:
         with pytest.raises(Exception):
             LootItem(found_in="Session-022")
 
-    def test_loot_requires_found_in(self):
+    def test_loot_requires_session_or_source_provenance(self):
         with pytest.raises(Exception):
             LootItem(name="Magic Sword")
 
@@ -125,3 +130,13 @@ class TestPlotThread:
             summary="Tracked down and interrogated. Killed by his own clone.",
         )
         assert thread.resolved_in == "Session-022"
+
+    def test_plot_thread_can_use_source_attribution_without_session(self):
+        thread = PlotThread(
+            title="The Marsh Chapel",
+            status=ThreadStatus.OPEN,
+            source_attribution="DM Jared notes",
+            summary="A hidden shrine beneath the chapel.",
+        )
+        assert thread.introduced_in is None
+        assert thread.source_attribution == "DM Jared notes"

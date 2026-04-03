@@ -32,17 +32,21 @@ _REFERENCE_SCALAR_KEYS = {
     "found_in",
     "held_by",
     "introduced_in",
+    "parent_location",
     "resolved_in",
 }
 
 _REFERENCE_LIST_KEYS = {
     "affiliations",
+    "adjacent_to",
     "connected_to",
     "known_members",
     "related_entities",
     "npcs",
     "locations",
 }
+
+_MAX_LOCATION_RELATIONSHIP_QUESTIONS = 5
 
 
 @dataclass
@@ -115,7 +119,302 @@ def improve_vault(cli) -> ImproveReport:
                 report.changed_files.append(path)
             updated_snapshot[path] = updated
 
+    location_updates = _refresh_location_relationships(updated_snapshot)
+    for path, updated in location_updates.items():
+        if updated == updated_snapshot.get(path):
+            continue
+        cli.create(path, updated)
+        if path not in report.changed_files:
+            report.changed_count += 1
+            report.changed_files.append(path)
+        updated_snapshot[path] = updated
+
+    existing_question_paths = set(snapshot.keys()) | set(report.question_files)
+    location_questions = _collect_location_relationship_questions(updated_snapshot, existing_question_paths)
+    for question_path, source_path, question in location_questions:
+        cli.create(question_path, _render_question(question, source_path))
+        report.question_count += 1
+        report.question_files.append(question_path)
+        existing_question_paths.add(question_path)
+
     return report
+
+
+def _refresh_location_relationships(snapshot: dict[str, str]) -> dict[str, str]:
+    """Backfill location hierarchy and derived parent-child relationship sections."""
+    location_data: dict[str, tuple[dict, str, str, str | None]] = {}
+    children_by_parent: dict[str, list[str]] = {}
+
+    for path, content in snapshot.items():
+        if not path.startswith("Locations/"):
+            continue
+        frontmatter = _parse_frontmatter(content)
+        body = _strip_frontmatter(content)
+        body = _merge_source_updates_into_description(body)
+        body = _sanitize_location_body(body)
+        name = _canonical_name(path, frontmatter)
+        parent = _infer_parent_location(frontmatter, body, name)
+        location_data[path] = (frontmatter, body, name, parent)
+        if parent:
+            children_by_parent.setdefault(parent, []).append(name)
+
+    updates: dict[str, str] = {}
+    for path, (frontmatter, body, name, parent) in location_data.items():
+        updated_frontmatter = dict(frontmatter)
+        adjacency = updated_frontmatter.pop("adjacent_to", None)
+        connected = updated_frontmatter.pop("connected_to", None)
+        nearby = adjacency or connected or []
+        if isinstance(nearby, list):
+            nearby = [_strip_wikilink(str(item)) for item in nearby]
+            if parent:
+                nearby = [item for item in nearby if _strip_wikilink(item) != parent]
+            if nearby:
+                updated_frontmatter["adjacent_to"] = nearby
+        if parent:
+            updated_frontmatter["parent_location"] = parent
+
+        child_locations = sorted(set(children_by_parent.get(name, [])))
+        updated_body = _upsert_location_relationship_section(
+            body,
+            parent,
+            child_locations,
+            nearby if isinstance(nearby, list) else [],
+        )
+        rebuilt = _frontmatter(**updated_frontmatter)
+        if updated_body and not updated_body.startswith("\n"):
+            candidate = f"{rebuilt}\n{updated_body}"
+        else:
+            candidate = f"{rebuilt}{updated_body}"
+        updates[path] = candidate
+
+    return updates
+
+
+def _infer_parent_location(frontmatter: dict, body: str, name: str) -> str | None:
+    """Infer a location's parent from frontmatter or explicit body phrases."""
+    parent = frontmatter.get("parent_location")
+    if isinstance(parent, str) and parent.strip():
+        return _strip_wikilink(parent.strip())
+
+    contained_match = re.search(r"\*\*(?:Contained In|Belongs To):\*\*\s+\[\[([^\]]+)\]\]", body)
+    if contained_match:
+        return _strip_wikilink(contained_match.group(1))
+
+    description = _extract_section(body, "Description") or body
+    description = re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", r"\1", description)
+    match = re.search(
+        r"\b(?:district|location|area|quarter|ward|market|settlement|point of interest|notable area)\s+(?:in|within)\s+([A-Z][A-Za-z' -]+?)(?:\s+(?:containing|contains|featuring|known|with|near)\b|[.\n,]|$)",
+        description,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    candidate = match.group(1).strip()
+    if candidate and candidate != name:
+        return candidate
+    return None
+
+
+def _upsert_location_relationship_section(
+    body: str,
+    parent: str | None,
+    child_locations: list[str],
+    nearby_locations: list[str],
+) -> str:
+    """Place location relationships in the top note metadata block."""
+    body = re.sub(
+        r"\n*## Location Relationships\n\n<!-- chronicler:location-relationships:start -->\n.*?\n<!-- chronicler:location-relationships:end -->\n*",
+        "\n\n",
+        body,
+        flags=re.DOTALL,
+    )
+    lines = body.splitlines()
+    skip_prefixes = (
+        "**Connected To:**",
+        "**Contained In:**",
+        "**Adjacent To:**",
+        "**Belongs To:**",
+        "**Nearby Locations:**",
+        "**Contains:**",
+    )
+    filtered = [line for line in lines if not line.strip().startswith(skip_prefixes)]
+    relationship_lines: list[str] = []
+    if parent:
+        relationship_lines.append(f"**Belongs To:** [[{parent}]]")
+    if child_locations:
+        relationship_lines.append(f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}")
+    if nearby_locations:
+        relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in nearby_locations)}")
+    if not relationship_lines:
+        return "\n".join(filtered).rstrip() + "\n"
+    title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+    if title_idx is None:
+        return "\n".join(filtered).rstrip() + "\n"
+    insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+    while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
+        insert_at += 1
+    if insert_at < len(filtered) and filtered[insert_at] != "":
+        filtered.insert(insert_at, "")
+    for offset, line in enumerate(relationship_lines):
+        filtered.insert(insert_at + offset, line)
+    if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+        filtered.insert(insert_at + len(relationship_lines), "")
+    return "\n".join(filtered).rstrip() + "\n"
+
+
+def _extract_section(body: str, heading: str) -> str:
+    """Extract text under a ``## heading`` until the next heading."""
+    lines = body.splitlines()
+    capture = False
+    result: list[str] = []
+    for line in lines:
+        if line.strip().lower() == f"## {heading.lower()}":
+            capture = True
+            continue
+        if capture:
+            if line.strip().startswith("## "):
+                break
+            result.append(line)
+    return " ".join(line.strip() for line in result if line.strip())
+
+
+def _strip_wikilink(value: str) -> str:
+    cleaned = value.strip()
+    while cleaned.startswith("[[") and cleaned.endswith("]]"):
+        cleaned = cleaned[2:-2].strip()
+    if "|" in cleaned:
+        cleaned = cleaned.split("|", 1)[0].strip()
+    return cleaned
+
+
+def _merge_source_updates_into_description(body: str) -> str:
+    """Remove visible source-update sections and fold their prose into Description."""
+    pattern = re.compile(
+        r"\n*## Source Updates\n\n<!-- chronicler:source-updates:start -->\n(.*?)\n<!-- chronicler:source-updates:end -->\n*",
+        re.DOTALL,
+    )
+    match = pattern.search(body)
+    if not match:
+        return body
+
+    source_block = match.group(1)
+    source_block = re.sub(r"(?<!\n)(###\s+)", r"\n\1", source_block)
+    paragraphs = []
+    for paragraph in re.split(r"\n\s*\n", source_block):
+        cleaned = re.sub(r"^### .*$", "", paragraph, flags=re.MULTILINE).strip()
+        if cleaned:
+            paragraphs.append(cleaned)
+
+    body_without_block = pattern.sub("\n\n", body).rstrip()
+    if not paragraphs:
+        return body_without_block + ("\n" if body_without_block else "")
+
+    description_addition = "\n\n".join(paragraphs)
+    if "## Description\n" in body_without_block:
+        section_pattern = re.compile(r"(## Description\n(?:\n)?)(.*?)(\n## |\Z)", re.DOTALL)
+        match = section_pattern.search(body_without_block)
+        if match:
+            existing_description = match.group(2).rstrip()
+            merged_description = existing_description
+            if description_addition not in existing_description:
+                merged_description = (
+                    existing_description if not existing_description else f"{existing_description}\n\n{description_addition}"
+                )
+            replacement = f"{match.group(1)}{merged_description}{match.group(3)}"
+            return section_pattern.sub(replacement, body_without_block, count=1).rstrip() + "\n"
+
+    return body_without_block + f"\n\n## Description\n\n{description_addition}\n"
+
+
+def _sanitize_location_body(body: str) -> str:
+    """Remove stale inline source labels and collapse duplicate description headings."""
+    cleaned = re.sub(r"###\s+(?:Imported source:[^\n]*|\[\[[^\]]+\]\]\.md)", "", body)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    parts = re.split(r"\n## Description\n(?:\n)?", cleaned)
+    if len(parts) <= 2:
+        return cleaned
+
+    prefix = parts[0]
+    description_parts = [part.strip() for part in parts[1:] if part.strip()]
+    merged_description = "\n\n".join(description_parts)
+    return prefix.rstrip() + "\n\n## Description\n\n" + merged_description + "\n"
+
+
+def _collect_location_relationship_questions(
+    snapshot: dict[str, str],
+    existing_question_paths: set[str],
+) -> list[tuple[str, str, AgentQuestion]]:
+    """Create high-signal location relationship questions with dedupe and a run cap."""
+    queued: list[tuple[str, str, AgentQuestion]] = []
+    for path, content in snapshot.items():
+        if not path.startswith("Locations/"):
+            continue
+        frontmatter = _parse_frontmatter(content)
+        body = _strip_frontmatter(content)
+        question = _location_relationship_question(path, frontmatter, body)
+        if question is None:
+            continue
+        question_path = _question_path(path, question.question)
+        if _question_exists(question_path, existing_question_paths):
+            continue
+        queued.append((question_path, path, question))
+        if len(queued) >= _MAX_LOCATION_RELATIONSHIP_QUESTIONS:
+            break
+    return queued
+
+
+def _question_exists(question_path: str, existing_paths: set[str]) -> bool:
+    basename = Path(question_path).name
+    return any(Path(path).name == basename for path in existing_paths if "Questions" in path)
+
+
+def _location_relationship_question(path: str, frontmatter: dict, body: str) -> AgentQuestion | None:
+    """Return a deterministic relationship question for high-signal unresolved location cues."""
+    name = _canonical_name(path, frontmatter)
+    description = _extract_section(body, "Description") or body
+    plain_description = re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", r"\1", description)
+    parent = frontmatter.get("parent_location")
+    nearby = frontmatter.get("adjacent_to")
+
+    if not parent and re.search(r"\b(?:district|area|quarter|ward|location|notable area)\b.*\b(?:within|in)\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which larger location does {name} belong to?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note strongly implies the location belongs to a larger place, but the deterministic improver could not resolve it safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    if not nearby and re.search(r"\b(?:near|nearby|adjacent|between|next to)\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which nearby locations should be recorded for {name}?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note suggests nearby-location relationships, but the deterministic improver could not resolve them safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    if not re.search(r"\*\*Contains:\*\*", body) and re.search(r"\bcontains\b", plain_description, re.IGNORECASE):
+        return AgentQuestion(
+            question=f"Which locations belong inside {name}?",
+            context=(
+                "issue_type: location_relationship_missing\n"
+                f"note: {path}\n"
+                f"location: {name}\n"
+                "The note suggests child locations, but the deterministic improver could not resolve them safely."
+            ),
+            priority=QuestionPriority.MEDIUM,
+        )
+
+    return None
 
 
 def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:

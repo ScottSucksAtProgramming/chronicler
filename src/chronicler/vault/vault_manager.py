@@ -23,7 +23,7 @@ from chronicler.models.entities import (
     PlotThread,
     ThreadStatus,
 )
-from chronicler.models.extraction import AgentQuestion, ExtractionResult
+from chronicler.models.extraction import AgentQuestion, ExtractionResult, KnowledgeIngestResult
 from chronicler.models.session import SessionRecap
 from chronicler.vault.dedup import find_match
 from chronicler.vault.note_renderer import (
@@ -147,7 +147,7 @@ class VaultManager:
         if existing and not update_existing:
             return
         path = existing or f"Locations/{loc.name}.md"
-        self.cli.create(path, render_location_note(loc))
+        self.cli.create(path, render_location_note(loc, child_locations=self._find_child_locations(loc.name)))
 
     def write_faction(self, faction: Faction, update_existing: bool = False) -> None:
         """Create (or optionally update) a Faction note in ``Factions/``."""
@@ -234,6 +234,254 @@ class VaultManager:
 
         for question in result.questions:
             self.write_question(question)
+
+    def write_source_ingest_result(self, result: KnowledgeIngestResult) -> None:
+        """Write a knowledge-first ingest result into the vault."""
+        for npc in result.npcs:
+            self._write_source_npc(npc)
+        for loc in result.locations:
+            self._write_source_location(loc)
+        for faction in result.factions:
+            self._write_source_faction(faction)
+        for item in result.loot:
+            self._write_source_loot(item)
+
+        open_threads = [t for t in result.plot_threads if t.status == ThreadStatus.OPEN]
+        self.update_open_threads(open_threads)
+
+        if result.session_number is not None and result.recap is not None:
+            self.write_session(
+                result.recap,
+                result.npcs,
+                result.locations,
+                factions=result.factions,
+                loot=result.loot,
+            )
+            existing_npcs = self.cli.find_notes_in_folder("NPCs/")
+            existing_locs = self.cli.find_notes_in_folder("Locations/")
+            self.update_dashboard(
+                session_number=result.session_number,
+                npc_count=len(existing_npcs) + len(result.npcs),
+                location_count=len(existing_locs) + len(result.locations),
+                thread_count=len(open_threads),
+            )
+
+        for question in result.questions:
+            self.write_question(question)
+
+    def _write_source_npc(self, npc: NPC) -> None:
+        existing = self._find_existing(npc.name, "NPCs/")
+        if existing and npc.source_attribution:
+            self._merge_source_update(existing, npc.source_attribution, npc.description)
+            return
+        self.write_npc(npc)
+
+    def _write_source_location(self, loc: Location) -> None:
+        existing = self._find_existing(loc.name, "Locations/")
+        if existing and loc.source_attribution:
+            try:
+                existing_content = self.cli.read(existing)
+            except Exception:
+                existing_content = ""
+            updated = self._apply_source_update(existing_content, loc.source_attribution, loc.description)
+            updated = self._apply_location_relationships(
+                updated,
+                loc,
+                child_locations=self._find_child_locations(loc.name),
+            )
+            self.cli.create(existing, updated)
+        else:
+            self.write_location(loc)
+        self._sync_parent_location_relationships(loc)
+
+    def _write_source_faction(self, faction: Faction) -> None:
+        existing = self._find_existing(faction.name, "Factions/")
+        if existing and faction.source_attribution:
+            self._merge_source_update(existing, faction.source_attribution, faction.description)
+            return
+        self.write_faction(faction)
+
+    def _write_source_loot(self, item: LootItem) -> None:
+        existing = self._find_existing(item.name, "Loot/")
+        if existing and item.source_attribution:
+            self._merge_source_update(existing, item.source_attribution, item.description)
+            return
+        self.write_loot(item)
+
+    def _merge_source_update(
+        self,
+        path: str,
+        source_label: str,
+        description: str | None,
+    ) -> None:
+        """Append or replace a managed source-update section without overwriting the note."""
+        try:
+            existing = self.cli.read(path)
+        except Exception:
+            existing = ""
+        updated = self._apply_source_update(existing, source_label, description)
+        self.cli.create(path, updated)
+
+    def _apply_source_update(
+        self,
+        existing: str,
+        source_label: str,
+        description: str | None,
+    ) -> str:
+        """Merge imported descriptive text into the note without visible source labels."""
+        if not description:
+            return self._strip_source_update_block(existing)
+        cleaned = self._strip_source_update_block(existing)
+        return self._append_description_paragraph(cleaned, description)
+
+    def _merge_location_relationships(self, path: str, loc: Location, child_locations: list[str] | None = None) -> None:
+        """Append or replace a managed location-relationship section."""
+        try:
+            existing = self.cli.read(path)
+        except Exception:
+            existing = ""
+        updated = self._apply_location_relationships(existing, loc, child_locations=child_locations)
+        if updated != existing:
+            self.cli.create(path, updated)
+
+    def _apply_location_relationships(
+        self,
+        existing: str,
+        loc: Location,
+        child_locations: list[str] | None = None,
+    ) -> str:
+        """Return note content with location relationships surfaced in the top metadata block."""
+
+        adjacency_links = loc.adjacent_to or loc.connected_to
+        relationship_lines: list[str] = []
+        if loc.parent_location:
+            relationship_lines.append(f"**Belongs To:** [[{loc.parent_location}]]")
+        if adjacency_links:
+            relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in adjacency_links)}")
+        if child_locations:
+            relationship_lines.append(f"**Contains:** {', '.join(f'[[{name}]]' for name in child_locations)}")
+
+        cleaned = self._strip_location_relationship_block(existing)
+        return self._upsert_location_summary_lines(cleaned, relationship_lines)
+
+    def _sync_parent_location_relationships(self, loc: Location) -> None:
+        """Update the location itself and its parent note with navigable relationship links."""
+        if not loc.parent_location:
+            return
+
+        parent_path = self._find_existing(loc.parent_location, "Locations/")
+        if not parent_path:
+            return
+
+        parent_loc = Location(
+            name=loc.parent_location,
+            source_attribution="Derived location relationship",
+        )
+        self._merge_location_relationships(parent_path, parent_loc, child_locations=self._find_child_locations(loc.parent_location, pending_children=[loc.name]))
+
+    def _find_child_locations(self, parent_name: str, pending_children: list[str] | None = None) -> list[str]:
+        """Return child locations whose frontmatter points at *parent_name*."""
+        notes = self.cli.find_notes_in_folder("Locations/")
+        children: list[str] = []
+        for note_path in notes:
+            try:
+                content = self.cli.read(note_path)
+            except Exception:
+                continue
+            fm = self._parse_frontmatter(content)
+            parent_value = fm.get("parent_location")
+            body_matches_parent = (
+                f"**Belongs To:** [[{parent_name}]]" in content
+                or f"**Contained In:** [[{parent_name}]]" in content
+            )
+            if parent_value == f"[[{parent_name}]]" or parent_value == parent_name or body_matches_parent:
+                name = fm.get("name")
+                if name:
+                    children.append(name)
+
+        for name in pending_children or []:
+            if name not in children:
+                children.append(name)
+
+        return sorted(children)
+
+    @staticmethod
+    def _strip_source_update_block(content: str) -> str:
+        content = re.sub(
+            r"\n*## Source Updates\n\n<!-- chronicler:source-updates:start -->\n.*?\n<!-- chronicler:source-updates:end -->\n*",
+            "\n\n",
+            content,
+            flags=re.DOTALL,
+        )
+        return content.rstrip() + "\n"
+
+    @staticmethod
+    def _append_description_paragraph(content: str, description: str) -> str:
+        if description in content:
+            return content
+        if "\n## Description\n" in content:
+            pattern = re.compile(r"(\n## Description\n\n)(.*?)(\n## |\Z)", re.DOTALL)
+            match = pattern.search(content)
+            if match:
+                body = match.group(2).rstrip()
+                updated_body = body if not body else f"{body}\n\n{description}"
+                replacement = f"{match.group(1)}{updated_body}{match.group(3)}"
+                return pattern.sub(replacement, content, count=1)
+        return content.rstrip() + f"\n\n## Description\n\n{description}\n"
+
+    @staticmethod
+    def _strip_location_relationship_block(content: str) -> str:
+        content = re.sub(
+            r"\n*## Location Relationships\n\n<!-- chronicler:location-relationships:start -->\n.*?\n<!-- chronicler:location-relationships:end -->\n*",
+            "\n\n",
+            content,
+            flags=re.DOTALL,
+        )
+        return content
+
+    @staticmethod
+    def _upsert_location_summary_lines(content: str, relationship_lines: list[str]) -> str:
+        lines = content.splitlines()
+        if not lines:
+            return content
+
+        filtered: list[str] = []
+        skip_prefixes = (
+            "**Connected To:**",
+            "**Contained In:**",
+            "**Adjacent To:**",
+            "**Belongs To:**",
+            "**Nearby Locations:**",
+            "**Contains:**",
+        )
+        for line in lines:
+            if line.strip().startswith(skip_prefixes):
+                continue
+            filtered.append(line)
+
+        if not relationship_lines:
+            return "\n".join(filtered).rstrip() + "\n"
+
+        insert_at = None
+        blank_seen_after_title = False
+        for idx, line in enumerate(filtered):
+            if idx == 0:
+                continue
+            if filtered[0].startswith("---"):
+                continue
+        title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+        if title_idx is None:
+            return "\n".join(filtered).rstrip() + "\n"
+        insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+        while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
+            insert_at += 1
+        if insert_at < len(filtered) and filtered[insert_at] != "":
+            filtered.insert(insert_at, "")
+        for offset, line in enumerate(relationship_lines):
+            filtered.insert(insert_at + offset, line)
+        if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+            filtered.insert(insert_at + len(relationship_lines), "")
+        return "\n".join(filtered).rstrip() + "\n"
 
     # ------------------------------------------------------------------
     # Index updates

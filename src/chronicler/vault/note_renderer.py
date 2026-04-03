@@ -48,12 +48,13 @@ _REFERENCE_SCALAR_KEYS = {
     "found_in",
     "held_by",
     "introduced_in",
+    "parent_location",
     "resolved_in",
 }
 
 _REFERENCE_LIST_KEYS = {
     "affiliations",
-    "connected_to",
+    "adjacent_to",
     "known_members",
     "related_entities",
     "npcs",
@@ -214,6 +215,7 @@ def render_npc_note(npc: NPC) -> str:
         name=npc.name,
         status=npc.status.value,
         first_appeared=npc.first_appeared,
+        source_attribution=npc.source_attribution,
         aliases=npc.aliases,
         affiliations=npc.affiliations,
         tags=npc.tags,
@@ -222,9 +224,12 @@ def render_npc_note(npc: NPC) -> str:
     body_lines = [
         f"# {npc.name}",
         "",
-        f"**First Appeared:** {wikify(npc.first_appeared)}",
         f"**Status:** {npc.status.value}",
     ]
+    if npc.first_appeared:
+        body_lines.insert(2, f"**First Appeared:** {wikify(npc.first_appeared)}")
+    elif npc.source_attribution:
+        body_lines.insert(2, f"**Source Attribution:** {npc.source_attribution}")
 
     if npc.aliases:
         body_lines.append(f"**Aliases:** {', '.join(npc.aliases)}")
@@ -249,28 +254,40 @@ def render_npc_note(npc: NPC) -> str:
 # ---------------------------------------------------------------------------
 
 
-def render_location_note(loc: Location) -> str:
+def render_location_note(loc: Location, child_locations: list[str] | None = None) -> str:
     """Render a Location entity as an Obsidian markdown note."""
+    adjacency_links = loc.adjacent_to or loc.connected_to
     fm = _frontmatter(
         type="location",
         name=loc.name,
         first_appeared=loc.first_appeared,
+        source_attribution=loc.source_attribution,
         aliases=loc.aliases,
-        connected_to=loc.connected_to,
+        parent_location=loc.parent_location,
+        adjacent_to=adjacency_links,
         tags=loc.tags,
     )
 
     body_lines = [
         f"# {loc.name}",
         "",
-        f"**First Appeared:** {wikify(loc.first_appeared)}",
     ]
+    if loc.first_appeared:
+        body_lines.append(f"**First Appeared:** {wikify(loc.first_appeared)}")
+    elif loc.source_attribution:
+        body_lines.append(f"**Source Attribution:** {loc.source_attribution}")
 
     if loc.aliases:
         body_lines.append(f"**Aliases:** {', '.join(loc.aliases)}")
 
-    if loc.connected_to:
-        body_lines.append(f"**Connected To:** {wikify(loc.connected_to)}")
+    if loc.parent_location:
+        body_lines.append(f"**Belongs To:** {wikify(loc.parent_location)}")
+
+    if adjacency_links:
+        body_lines.append(f"**Nearby Locations:** {wikify(adjacency_links)}")
+
+    if child_locations:
+        body_lines.append(f"**Contains:** {wikify(child_locations)}")
 
     if loc.description:
         body_lines += ["", "## Description", "", loc.description]
@@ -290,6 +307,7 @@ def render_faction_note(faction: Faction) -> str:
         type="faction",
         name=faction.name,
         first_appeared=faction.first_appeared,
+        source_attribution=faction.source_attribution,
         aliases=faction.aliases,
         known_members=faction.known_members,
         tags=faction.tags,
@@ -298,8 +316,11 @@ def render_faction_note(faction: Faction) -> str:
     body_lines = [
         f"# {faction.name}",
         "",
-        f"**First Appeared:** {wikify(faction.first_appeared)}",
     ]
+    if faction.first_appeared:
+        body_lines.append(f"**First Appeared:** {wikify(faction.first_appeared)}")
+    elif faction.source_attribution:
+        body_lines.append(f"**Source Attribution:** {faction.source_attribution}")
 
     if faction.aliases:
         body_lines.append(f"**Aliases:** {', '.join(faction.aliases)}")
@@ -325,6 +346,7 @@ def render_loot_note(item: LootItem) -> str:
         type="loot",
         name=item.name,
         found_in=item.found_in,
+        source_attribution=item.source_attribution,
         held_by=item.held_by,
         tags=item.tags,
     )
@@ -332,8 +354,11 @@ def render_loot_note(item: LootItem) -> str:
     body_lines = [
         f"# {item.name}",
         "",
-        f"**Found In:** {wikify(item.found_in)}",
     ]
+    if item.found_in:
+        body_lines.append(f"**Found In:** {wikify(item.found_in)}")
+    elif item.source_attribution:
+        body_lines.append(f"**Source Attribution:** {item.source_attribution}")
 
     if item.held_by:
         body_lines.append(f"**Held By:** {item.held_by}")
@@ -423,6 +448,7 @@ def render_plot_thread_note(thread: PlotThread) -> str:
         title=thread.title,
         status=thread.status.value,
         introduced_in=thread.introduced_in,
+        source_attribution=thread.source_attribution,
         resolved_in=thread.resolved_in,
         related_entities=thread.related_entities,
         tags=thread.tags,
@@ -432,8 +458,11 @@ def render_plot_thread_note(thread: PlotThread) -> str:
         f"# {thread.title}",
         "",
         f"**Status:** {thread.status.value}",
-        f"**Introduced In:** {wikify(thread.introduced_in)}",
     ]
+    if thread.introduced_in:
+        body_lines.append(f"**Introduced In:** {wikify(thread.introduced_in)}")
+    elif thread.source_attribution:
+        body_lines.append(f"**Source Attribution:** {thread.source_attribution}")
 
     if thread.resolved_in:
         body_lines.append(f"**Resolved In:** {wikify(thread.resolved_in)}")
@@ -466,8 +495,13 @@ def render_open_threads(threads: list[PlotThread]) -> str:
     ]
 
     for thread in threads:
+        provenance = (
+            f"introduced {wikify(thread.introduced_in)}"
+            if thread.introduced_in
+            else f"source {thread.source_attribution}"
+        )
         lines.append(
-            f"- **{thread.title}** (introduced {wikify(thread.introduced_in)}): {thread.summary}"
+            f"- **{thread.title}** ({provenance}): {thread.summary}"
         )
 
     return "\n".join(lines) + "\n"

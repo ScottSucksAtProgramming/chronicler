@@ -15,8 +15,14 @@ from chronicler.models.session import (
     SessionRecap,
     KeyEvent,
 )
+from chronicler.models.source_document import (
+    DocumentType,
+    SourceClassification,
+    SourceDocument,
+)
 from chronicler.models.extraction import (
     ExtractionResult,
+    KnowledgeIngestResult,
     AgentQuestion,
     QuestionPriority,
     QualityScore,
@@ -41,7 +47,11 @@ __all__ = [
     "TranscriptSegment",
     "SessionRecap",
     "KeyEvent",
+    "DocumentType",
+    "SourceClassification",
+    "SourceDocument",
     "ExtractionResult",
+    "KnowledgeIngestResult",
     "AgentQuestion",
     "QuestionPriority",
     "QualityScore",

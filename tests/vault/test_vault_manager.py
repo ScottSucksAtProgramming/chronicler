@@ -16,6 +16,7 @@ from chronicler.models.entities import (
 from chronicler.models.session import SessionRecap, KeyEvent
 from chronicler.models.extraction import (
     ExtractionResult,
+    KnowledgeIngestResult,
     AgentQuestion,
     QuestionPriority,
 )
@@ -71,6 +72,8 @@ def _sample_location(**overrides) -> Location:
         first_appeared="Session-001",
         description="A frontier town.",
         aliases=["The Wall"],
+        parent_location=None,
+        adjacent_to=[],
         connected_to=["The Wilds"],
         tags=["town"],
     )
@@ -400,6 +403,212 @@ class TestWriteExtractionResult:
         manager.write_extraction_result(result)
         created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
         assert any("_Agent/Questions/" in p for p in created_paths)
+
+    def test_write_source_ingest_result_without_session_skips_session_note(self, manager, mock_cli):
+        result = KnowledgeIngestResult(
+            session_number=None,
+            npcs=[_sample_npc()],
+            locations=[_sample_location()],
+            factions=[],
+            loot=[],
+            plot_threads=[_sample_thread()],
+            recap=None,
+        )
+
+        manager.write_source_ingest_result(result)
+
+        created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
+        assert any("NPCs/" in p for p in created_paths)
+        assert any("Locations/" in p for p in created_paths)
+        assert not any("Sessions/" in p for p in created_paths)
+
+    def test_write_source_ingest_result_with_anchor_updates_session(self, manager, mock_cli):
+        result = KnowledgeIngestResult(
+            session_number=22,
+            npcs=[_sample_npc()],
+            locations=[],
+            factions=[],
+            loot=[],
+            plot_threads=[],
+            recap=_sample_recap(session_number=22, title="Recovered Lore"),
+        )
+
+        manager.write_source_ingest_result(result)
+
+        created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
+        assert any("Sessions/Session-022.md" == p for p in created_paths)
+
+    def test_write_source_ingest_result_updates_existing_location_additively(self, manager, mock_cli):
+        existing_note = (
+            "---\n"
+            "type: location\n"
+            "name: Laguna Nera\n"
+            'first_appeared: "[[Session-003]]"\n'
+            "---\n"
+            "# Laguna Nera\n\n"
+            "## Description\n\n"
+            "Original city summary.\n"
+        )
+        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
+            "NPCs/": [],
+            "Locations/": ["Locations/Laguna Nera.md"],
+            "Factions/": [],
+        }.get(folder, [])
+        mock_cli.read.side_effect = lambda path: {
+            "Locations/Laguna Nera.md": existing_note,
+        }.get(path, "")
+
+        result = KnowledgeIngestResult(
+            session_number=None,
+            npcs=[],
+            locations=[
+                _sample_location(
+                    name="Laguna Nera",
+                    first_appeared=None,
+                    source_attribution="Laguna Nera.md",
+                    description="A labyrinthine city of canals and underworld intrigue.",
+                )
+            ],
+            factions=[],
+            loot=[],
+            plot_threads=[],
+            recap=None,
+        )
+
+        manager.write_source_ingest_result(result)
+
+        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        updated = create_calls["Locations/Laguna Nera.md"]
+        assert "Original city summary." in updated
+        assert "A labyrinthine city of canals and underworld intrigue." in updated
+        assert "## Source Updates" not in updated
+        assert "### Laguna Nera.md" not in updated
+
+    def test_write_source_ingest_result_updates_parent_location_with_contains_links(self, manager, mock_cli):
+        parent_note = (
+            "---\n"
+            "type: location\n"
+            "name: Laguna Nera\n"
+            'first_appeared: "[[Session-003]]"\n'
+            "---\n"
+            "# Laguna Nera\n\n"
+            "## Description\n\n"
+            "Original city summary.\n"
+        )
+        child_note = (
+            "---\n"
+            "type: location\n"
+            "name: Silkmarket District\n"
+            "source_attribution: DM Jared notes\n"
+            "---\n"
+            "# Silkmarket District\n"
+        )
+        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
+            "NPCs/": [],
+            "Locations/": ["Locations/Laguna Nera.md", "Locations/Silkmarket District.md"],
+            "Factions/": [],
+        }.get(folder, [])
+        mock_cli.read.side_effect = lambda path: {
+            "Locations/Laguna Nera.md": parent_note,
+            "Locations/Silkmarket District.md": child_note,
+        }.get(path, "")
+
+        result = KnowledgeIngestResult(
+            session_number=None,
+            npcs=[],
+            locations=[
+                _sample_location(
+                    name="Silkmarket District",
+                    first_appeared=None,
+                    source_attribution="Laguna Nera.md",
+                    description="A merchant quarter of bridges and covered markets.",
+                    parent_location="Laguna Nera",
+                    adjacent_to=["Harbor District"],
+                )
+            ],
+            factions=[],
+            loot=[],
+            plot_threads=[],
+            recap=None,
+        )
+
+        manager.write_source_ingest_result(result)
+
+        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        updated_child = create_calls["Locations/Silkmarket District.md"]
+        updated_parent = create_calls["Locations/Laguna Nera.md"]
+        assert "**Belongs To:** [[Laguna Nera]]" in updated_child
+        assert "**Nearby Locations:** [[Harbor District]]" in updated_child
+        assert "**Contains:** [[Silkmarket District]]" in updated_parent
+        assert "## Location Relationships" not in updated_child
+        assert "## Location Relationships" not in updated_parent
+
+    def test_write_source_ingest_result_preserves_existing_child_links_on_parent(self, manager, mock_cli):
+        parent_note = (
+            "---\n"
+            "type: location\n"
+            "name: Laguna Nera\n"
+            "---\n"
+            "# Laguna Nera\n"
+        )
+        existing_child_note = (
+            "---\n"
+            "type: location\n"
+            "name: Mist Alley\n"
+            "---\n"
+            "# Mist Alley\n\n"
+            "## Location Relationships\n\n"
+            "<!-- chronicler:location-relationships:start -->\n\n"
+            "**Contained In:** [[Laguna Nera]]\n\n"
+            "<!-- chronicler:location-relationships:end -->\n"
+        )
+        new_child_note = (
+            "---\n"
+            "type: location\n"
+            "name: Siren's Hollow\n"
+            "source_attribution: DM Jared notes\n"
+            "---\n"
+            "# Siren's Hollow\n"
+        )
+        mock_cli.find_notes_in_folder.side_effect = lambda folder: {
+            "NPCs/": [],
+            "Locations/": [
+                "Locations/Laguna Nera.md",
+                "Locations/Mist Alley.md",
+                "Locations/Siren's Hollow.md",
+            ],
+            "Factions/": [],
+        }.get(folder, [])
+        mock_cli.read.side_effect = lambda path: {
+            "Locations/Laguna Nera.md": parent_note,
+            "Locations/Mist Alley.md": existing_child_note,
+            "Locations/Siren's Hollow.md": new_child_note,
+        }.get(path, "")
+
+        result = KnowledgeIngestResult(
+            session_number=None,
+            npcs=[],
+            locations=[
+                _sample_location(
+                    name="Siren's Hollow",
+                    first_appeared=None,
+                    source_attribution="Laguna Nera.md",
+                    description="A hidden pocket of canals and echoing song.",
+                    parent_location="Laguna Nera",
+                )
+            ],
+            factions=[],
+            loot=[],
+            plot_threads=[],
+            recap=None,
+        )
+
+        manager.write_source_ingest_result(result)
+
+        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        updated_parent = create_calls["Locations/Laguna Nera.md"]
+        assert "[[Mist Alley]]" in updated_parent
+        assert "[[Siren's Hollow]]" in updated_parent
 
 
 # ---------------------------------------------------------------------------

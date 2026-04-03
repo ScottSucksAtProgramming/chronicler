@@ -102,3 +102,26 @@ class TestIndexVault:
 
         count = await indexer.index_vault()
         assert count == 1  # Only the NPC, not agent files
+
+    @pytest.mark.asyncio
+    async def test_index_skips_agent_sources_folder(self):
+        mock_cli = MagicMock()
+        mock_cli.read_all_notes.return_value = {
+            "_Agent/Sources/2026-04-03-legacy-note/metadata.md": "# Metadata\n",
+            "_Agent/Sources/2026-04-03-legacy-note/extracted.md": "# Extracted\n\nCult notes.",
+            "NPCs/Theron.md": "# Theron\n\nA ranger.",
+        }
+
+        mock_embed_client = MagicMock()
+        mock_embed_client.embed_batch = AsyncMock(return_value=[[0.1] * 768])
+
+        mock_collection = MagicMock()
+
+        indexer = VaultIndexer(
+            cli=mock_cli,
+            embed_client=mock_embed_client,
+            collection=mock_collection,
+        )
+
+        count = await indexer.index_vault()
+        assert count == 1

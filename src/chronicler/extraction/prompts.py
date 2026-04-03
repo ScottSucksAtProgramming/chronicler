@@ -156,6 +156,130 @@ Return a JSON object with this exact structure:
 Return ONLY the JSON object. No markdown formatting, no explanation."""
 
 
+def build_source_extraction_prompt(
+    source_text: str,
+    context: ContextBundle,
+    source_label: str,
+    session_anchor: int | None,
+    source_attribution: str | None,
+) -> str:
+    """Build an extraction prompt for general imported source material."""
+    context_str = _format_context(context)
+    session_rule = (
+        f'- This import is anchored to Session {session_anchor}. Use "Session-{session_anchor:03d}" for session provenance fields when justified.'
+        if session_anchor is not None
+        else (
+            "- This import is not anchored to a session. Leave session provenance fields as null unless the material explicitly establishes a session.\n"
+            "- Use `source_attribution` for extracted entities when the material indicates who authored or supplied the information."
+        )
+    )
+    known_attribution = (
+        f"Known source attribution: {source_attribution}"
+        if source_attribution
+        else "Known source attribution: none"
+    )
+
+    return f"""You are extracting structured D&D campaign data from imported campaign source material.
+
+## Campaign Context
+
+{context_str}
+
+## Source Metadata
+
+- Source label: {source_label}
+- {known_attribution}
+
+## Source Material
+
+{source_text}
+
+## Instructions
+
+Extract campaign knowledge from this material.
+
+**IMPORTANT RULES:**
+- Do NOT extract player characters as NPCs.
+- Do NOT invent session provenance for unanchored material.
+- If a source attribution is apparent from the document, preserve it in `source_attribution`.
+- If the material lacks enough provenance to safely ground important extracted facts, add a question asking the user for source attribution.
+- For locations, use `parent_location` for containment (district in city, city in region) and `adjacent_to` for neighbor-style map links.
+- Only include location relationships when the source is explicit enough to be reliable. If the document leaves unclear geography, add a question instead of guessing.
+- Use null for session provenance fields when the source is unanchored and the document does not establish a session.
+- {session_rule}
+
+Return a JSON object with this exact structure:
+```json
+{{
+  "npcs": [
+    {{
+      "name": "string",
+      "first_appeared": "Session-NNN or null",
+      "source_attribution": "string or null",
+      "status": "alive|dead|unknown",
+      "description": "string",
+      "aliases": ["string"],
+      "affiliations": ["string"],
+      "tags": ["string"],
+      "key_interactions": ["string"]
+    }}
+  ],
+  "locations": [
+    {{
+      "name": "string",
+      "first_appeared": "Session-NNN or null",
+      "source_attribution": "string or null",
+      "description": "string",
+      "aliases": ["string"],
+      "parent_location": "string or null",
+      "adjacent_to": ["string"],
+      "connected_to": ["string"],
+      "tags": ["string"]
+    }}
+  ],
+  "factions": [
+    {{
+      "name": "string",
+      "first_appeared": "Session-NNN or null",
+      "source_attribution": "string or null",
+      "description": "string",
+      "known_members": ["string"],
+      "aliases": ["string"],
+      "tags": ["string"]
+    }}
+  ],
+  "loot": [
+    {{
+      "name": "string",
+      "found_in": "Session-NNN or null",
+      "source_attribution": "string or null",
+      "description": "string",
+      "held_by": "string or null",
+      "tags": ["string"]
+    }}
+  ],
+  "plot_threads": [
+    {{
+      "title": "string",
+      "status": "open|closed",
+      "introduced_in": "Session-NNN or null",
+      "source_attribution": "string or null",
+      "summary": "string"
+    }}
+  ],
+  "questions": [
+    {{
+      "question": "string",
+      "context": "string",
+      "priority": "low|medium|high"
+    }}
+  ]
+}}
+```
+
+Return ONLY the JSON object. No markdown formatting, no explanation."""
+
+
 # v1 — 2026-04-02
 def build_recap_prompt(summary_text: str, session_number: int) -> str:
     """Build the session recap generation prompt."""

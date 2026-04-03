@@ -2,7 +2,7 @@
 title: "Chronicler Lessons Learned"
 summary: "Running log of corrections, preferences, and discoveries for the Chronicler project"
 created: 2026-04-02
-updated: 2026-04-02
+updated: 2026-04-03
 ---
 
 # Chronicler Lessons Learned
@@ -27,3 +27,14 @@ updated: 2026-04-02
 - 2026-04-02 (repo): A package rename is not finished when imports compile. Repo polish also needs aligned ignore rules, maintenance docs, and generic top-level documentation so the remote repository reflects the supported public surface.
 - 2026-04-03 (vault-links): Obsidian link targets must canonicalize to actual note path stems, not display-style frontmatter names; quote-style and accent variants should normalize onto the filename so wiki links resolve to the real notes.
 - 2026-04-03 (workflow): For live-vault features, code-level tests are not sufficient; the completion bar is focused regressions, broader suite coverage, and one installed-CLI validation against the real vault before reporting success.
+- 2026-04-03 (ingest): Unanchored source imports need separate `source_attribution` provenance instead of fake `Session-NNN` values; missing provenance should become a question, not a guess.
+- 2026-04-03 (ingest): Source PDF parsing cannot assume PLAUD structure; a generic pdfplumber text fallback is required so older PDFs can still enter the knowledge-ingest path.
+- 2026-04-03 (ingest): Knowledge-first source ingest needs its own result model and vault write path; reusing the session-only extraction result forces bad assumptions about recaps and session anchoring.
+- 2026-04-03 (vault): `vault_name` and `CHRONICLER_VAULT_PATH` can point at different vault locations in real usage; filesystem-backed operations must consistently honor the configured path or live writes will split across two vaults.
+- 2026-04-03 (ingest): Dedup-by-skip is wrong for knowledge imports into existing notes; source-driven updates need an additive managed section so imported lore enriches notes instead of being silently dropped.
+- 2026-04-03 (ingest): `source_attribution` inference must only trust explicit attribution-style lines near the top of a source; scraping arbitrary prose for words like "from" produces bad provenance.
+- 2026-04-03 (locations): Location hierarchy needs two passes: prompt for `parent_location`, then a deterministic fallback that promotes explicit phrases like "district in Laguna Nera" when the model only returns a generic connection.
+- 2026-04-03 (locations): Parent `Contains` links cannot rely on frontmatter alone once curated notes already exist; relationship discovery must also scan managed body sections so repeated imports accumulate children instead of replacing them.
+- 2026-04-03 (improve): `chronicler improve` needs a location-relationship backfill pass for pre-feature notes; otherwise older district notes never gain `parent_location` and parent city notes stay incomplete even after successful ingest.
+- 2026-04-03 (formatting): Visible agent scaffolding in location notes ages poorly; `improve` should normalize old notes into the same user-facing format as fresh renders by removing source-update sections, collapsing stale labels, and surfacing navigation fields in the top metadata block.
+- 2026-04-03 (questions): Deterministic maintenance can still ask useful relationship questions if triggers are high-signal and deduped against existing question files; otherwise repeated `improve` runs become noisy quickly.

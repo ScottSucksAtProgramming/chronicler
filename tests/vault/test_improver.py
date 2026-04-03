@@ -13,6 +13,172 @@ def _build_cli(snapshot: dict[str, str]) -> MagicMock:
 
 
 class TestImproveVault:
+    def test_improve_backfills_location_parent_from_explicit_description(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n"
+            ),
+            "Locations/Mist Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Mist Alley\n"
+                "connected_to: [Laguna Nera]\n"
+                "---\n"
+                "# Mist Alley\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera containing the Perfumed Chapel.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.changed_count >= 1
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Mist Alley.md"
+        ][-1]
+        assert 'parent_location: "[[Laguna Nera]]"' in updated
+        assert "connected_to:" not in updated
+        assert "**Belongs To:** [[Laguna Nera]]" in updated
+        assert "## Location Relationships" not in updated
+
+    def test_improve_rebuilds_parent_contains_links_from_existing_locations(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n"
+            ),
+            "Locations/Mist Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Mist Alley\n"
+                "connected_to: [Laguna Nera]\n"
+                "---\n"
+                "# Mist Alley\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera.\n"
+            ),
+            "Locations/Floating Market.md": (
+                "---\n"
+                "type: location\n"
+                "name: Floating Market\n"
+                "---\n"
+                "# Floating Market\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera featuring markets on the water.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Laguna Nera.md"
+        ][-1]
+        assert "**Contains:** [[Floating Market]], [[Mist Alley]]" in updated
+        assert "## Location Relationships" not in updated
+
+    def test_improve_removes_visible_source_update_sections_from_locations(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n\n"
+                "## Description\n\n"
+                "Original summary.\n\n"
+                "## Source Updates\n\n"
+                "<!-- chronicler:source-updates:start -->\n"
+                "### Imported source: Laguna Nera.md\n\n"
+                "A labyrinthine city of canals.\n"
+                "<!-- chronicler:source-updates:end -->\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Laguna Nera.md"
+        ][-1]
+        assert "## Source Updates" not in updated
+        assert "### Imported source:" not in updated
+        assert "A labyrinthine city of canals." in updated
+
+    def test_improve_cleans_malformed_source_update_labels_and_keeps_single_description_heading(self):
+        snapshot = {
+            "Locations/Anchor Bridge.md": (
+                "---\n"
+                "type: location\n"
+                "name: Anchor Bridge\n"
+                "---\n"
+                "# Anchor Bridge\n"
+                "**Belongs To:** [[Sestiere Aureo]]\n\n"
+                "## Description\n"
+                "A point of interest located within The Rusted Docks district of Laguna Nera.\n\n"
+                "## Source Updates\n\n"
+                "<!-- chronicler:source-updates:start -->\n"
+                "### Imported source: Laguna Nera.md\n\n"
+                "A location within Sestiere Aureo district.### [[Laguna Nera]].md\n\n"
+                "A landmark bridge over the canals.\n"
+                "<!-- chronicler:source-updates:end -->\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Anchor Bridge.md"
+        ][-1]
+        assert updated.count("## Description") == 1
+        assert "### [[Laguna Nera]].md" not in updated
+        assert "### Imported source:" not in updated
+        assert "A landmark bridge over the canals." in updated
+
+    def test_improve_cleans_inline_source_labels_already_baked_into_description(self):
+        snapshot = {
+            "Locations/Sestiere Aureo.md": (
+                "---\n"
+                "type: location\n"
+                "name: Sestiere Aureo\n"
+                'parent_location: "[[Laguna Nera]]"\n'
+                "---\n"
+                "# Sestiere Aureo\n\n"
+                "**Belongs To:** [[Laguna Nera]]\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera.### [[Laguna Nera]].md\n\n"
+                "A district in Laguna Nera, featuring golden architecture.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Sestiere Aureo.md"
+        ][-1]
+        assert "### [[Laguna Nera]].md" not in updated
+        assert updated.count("## Description") == 1
+
     def test_improve_links_body_mentions_from_canonical_note_names(self):
         snapshot = {
             "NPCs/Salty McKeel.md": (
@@ -174,6 +340,77 @@ class TestImproveVault:
         assert "ambiguous_entity_reference" in question_content
         assert "Rook" in question_content
         assert "Session-003.md" in question_content
+
+    def test_improve_creates_high_signal_location_relationship_question(self):
+        snapshot = {
+            "Locations/Venom Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Venom Alley\n"
+                "---\n"
+                "# Venom Alley\n\n"
+                "## Description\n\n"
+                "A dangerous quarter near the Floating Market and Mist Alley.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 1
+        question_path, question_content = next(
+            call.args
+            for call in cli.create.call_args_list
+            if call.args[0].startswith("_Agent/Questions/")
+        )
+        assert "location_relationship_missing" in question_content
+        assert "Venom Alley" in question_content
+        assert "nearby locations" in question_content.lower()
+        assert question_path.startswith("_Agent/Questions/")
+
+    def test_improve_does_not_repeat_existing_location_relationship_question(self):
+        snapshot = {
+            "Locations/Venom Alley.md": (
+                "---\n"
+                "type: location\n"
+                "name: Venom Alley\n"
+                "---\n"
+                "# Venom Alley\n\n"
+                "## Description\n\n"
+                "A district or notable area within Laguna Nera.\n"
+            ),
+            "_Agent/Questions/venom-alley-which-larger-location-does-venom-alley-belo.md": (
+                "---\n"
+                "type: agent-question\n"
+                "priority: medium\n"
+                "---\n\n"
+                "# Which larger location does Venom Alley belong to?\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 0
+
+    def test_improve_caps_location_relationship_questions_per_run(self):
+        snapshot = {
+            f"Locations/District {i}.md": (
+                "---\n"
+                "type: location\n"
+                f"name: District {i}\n"
+                "---\n"
+                f"# District {i}\n\n"
+                "## Description\n\n"
+                "A dangerous quarter near the Floating Market and Mist Alley.\n"
+            )
+            for i in range(1, 8)
+        }
+        cli = _build_cli(snapshot)
+
+        report = improve_vault(cli)
+
+        assert report.question_count == 5
 
     def test_improve_uses_agent_memory_aliases_when_unambiguous(self):
         snapshot = {

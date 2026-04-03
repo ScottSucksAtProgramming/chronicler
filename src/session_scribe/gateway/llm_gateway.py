@@ -240,6 +240,85 @@ class LLMGateway:
                     f"Structured output parsing failed after correction: {retry_error}"
                 ) from retry_error
 
+    def complete_sync(self, request: LLMRequest) -> LLMResponse:
+        """Synchronous version of complete() for use in threaded contexts.
+
+        For Kimi provider: runs subprocess directly.
+        For nanogpt provider: uses sync httpx.
+        """
+        if self.settings.llm_provider == "kimi":
+            return self._complete_kimi_sync(request)
+        else:
+            return self._complete_nanogpt_sync(request)
+
+    def _complete_kimi_sync(self, request: LLMRequest) -> LLMResponse:
+        """Sync Kimi CLI completion."""
+        prompt_parts = []
+        for msg in request.messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role == "system":
+                prompt_parts.append(f"[System instruction]: {content}")
+            elif role == "assistant":
+                prompt_parts.append(f"[Previous response]: {content}")
+            else:
+                prompt_parts.append(content)
+
+        full_prompt = "\n\n".join(prompt_parts)
+        cmd = ["kimi", "--quiet", "-p", full_prompt]
+        if self.settings.kimi_model:
+            cmd.extend(["-m", self.settings.kimi_model])
+
+        start = time.monotonic()
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=self.settings.llm_timeout_seconds * 4,
+        )
+        latency = time.monotonic() - start
+
+        if result.returncode != 0:
+            raise LLMGatewayError(f"Kimi CLI error: {result.stderr.strip()}")
+
+        content = result.stdout.strip()
+        if not content:
+            raise LLMGatewayError("Kimi CLI returned empty response")
+
+        logger.info("Kimi sync call: latency=%.2fs", latency)
+        return LLMResponse(
+            content=content,
+            model=self.settings.kimi_model or "kimi-default",
+            usage=LLMUsage(prompt_tokens=0, completion_tokens=0),
+        )
+
+    def _complete_nanogpt_sync(self, request: LLMRequest) -> LLMResponse:
+        """Sync nano-gpt.com completion."""
+        response = httpx.post(
+            f"{self.settings.nanogpt_base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.settings.nanogpt_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": request.model,
+                "messages": request.messages,
+                "temperature": request.temperature,
+            },
+            timeout=self.settings.llm_timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json()
+        usage_data = data.get("usage", {})
+        return LLMResponse(
+            content=data["choices"][0]["message"]["content"],
+            model=data.get("model", request.model),
+            usage=LLMUsage(
+                prompt_tokens=usage_data.get("prompt_tokens", 0),
+                completion_tokens=usage_data.get("completion_tokens", 0),
+            ),
+        )
+
     async def close(self) -> None:
         """Close the HTTP client if one was created."""
         if self._client:

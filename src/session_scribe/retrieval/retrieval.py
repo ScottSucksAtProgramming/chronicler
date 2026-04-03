@@ -62,3 +62,37 @@ class RetrievalLayer:
 
         logger.info("Search for %r returned %d results", query, len(results))
         return results
+
+    def search_sync(self, query: str, top_k: int = 5) -> list[SearchResult]:
+        """Synchronous version of search() for use in threaded contexts."""
+        if not query.strip():
+            return []
+
+        embedding = self._embed_client.embed_sync(query)
+
+        raw = self._collection.query(
+            query_embeddings=[embedding],
+            n_results=top_k,
+        )
+
+        ids: list[str] = raw.get("ids", [[]])[0]
+        if not ids:
+            return []
+
+        documents: list[str] = raw.get("documents", [[]])[0]
+        metadatas: list[dict] = raw.get("metadatas", [[]])[0]
+        distances: list[float] = raw.get("distances", [[]])[0]
+
+        results: list[SearchResult] = []
+        for doc, meta, dist in zip(documents, metadatas, distances):
+            results.append(
+                SearchResult(
+                    path=meta.get("path", ""),
+                    heading=meta.get("heading", ""),
+                    content=doc,
+                    score=dist,
+                )
+            )
+
+        logger.info("Search for %r returned %d results", query, len(results))
+        return results

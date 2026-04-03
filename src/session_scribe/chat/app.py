@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -89,27 +87,19 @@ class ChatApp(App):
 
     @work(thread=True)
     def _run_query(self, query: str) -> None:
-        """Run the RAG pipeline in a worker thread.
+        """Run the RAG pipeline in a worker thread using sync methods.
 
-        Uses a fresh event loop per call to avoid 'Event loop is closed' errors.
-        Each async operation is run with asyncio.run() in its own loop.
+        All calls are synchronous — no event loop needed in the thread.
         """
         status: Static | None = None
 
         try:
-            # Search phase
+            # Search phase (sync)
             status = self.app.call_from_thread(
                 self._add_message, "Searching vault...", "status-msg"
             )
 
-            # Run async search in a new event loop
-            loop = asyncio.new_event_loop()
-            try:
-                results: list[SearchResult] = loop.run_until_complete(
-                    self.retrieval.search(query)
-                )
-            finally:
-                loop.close()
+            results: list[SearchResult] = self.retrieval.search_sync(query)
 
             # Update status
             self.app.call_from_thread(self._update_status, status, "Thinking...")
@@ -121,15 +111,8 @@ class ChatApp(App):
                 model=self.model,
             )
 
-            # Call LLM in a new event loop
-            loop = asyncio.new_event_loop()
-            try:
-                response = loop.run_until_complete(
-                    self.gateway.complete(request)
-                )
-            finally:
-                loop.close()
-
+            # Call LLM (sync)
+            response = self.gateway.complete_sync(request)
             answer = response.content
 
             # Remove status widget

@@ -38,6 +38,19 @@ class EmbeddingClient:
         logger.info("Generated %d embeddings (model=%s)", len(embeddings), self.model)
         return embeddings
 
+    def embed_sync(self, text: str) -> list[float]:
+        """Synchronous version of embed() for use in threaded contexts."""
+        if not text.strip():
+            raise ValueError("Cannot embed empty text")
+        response = httpx.post(
+            f"{self.base_url}/embeddings",
+            json={"input": [text], "model": self.model},
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["data"][0]["embedding"]
+
     def health_check(self) -> bool:
         try:
             resp = httpx.get(f"{self.base_url}/models", timeout=5)

@@ -42,6 +42,7 @@ dnd_notes_organizaer/
       vault/
         __init__.py
         obsidian_cli.py  — ObsidianCLI, ObsidianCLIError (low-level CLI wrapper)
+        improver.py      — deterministic vault normalization and high-signal ambiguity/question generation
         source_archive.py — archives imported source artifacts under _Agent/Sources/
       retrieval/
         __init__.py
@@ -60,6 +61,7 @@ dnd_notes_organizaer/
       test_extractor.py
     vault/
       __init__.py
+      test_improver.py
       test_obsidian_cli.py
       test_source_archive.py
     retrieval/
@@ -102,6 +104,8 @@ These are non-negotiable. See the design spec Section 2 for full details.
 - **Vault is Source of Truth:** Agent memory, campaign state, everything lives in the Obsidian vault.
 - **Configured Vault Path Wins:** When `CHRONICLER_VAULT_PATH` is set, filesystem-backed vault reads/writes must honor it consistently instead of assuming the Obsidian CLI resolves `vault_name` to the same path.
 - **Knowledge Imports Are Additive:** Source-material ingest must enrich existing entity notes through managed additive sections instead of skipping duplicates or overwriting curated content.
+- **Location Notes Use One Navigation Format:** User-facing location notes should surface `Belongs To`, `Contains`, and `Nearby Locations` in the top metadata block. Legacy relationship labels and visible ingest scaffolding should be normalized away.
+- **Improve Stays Deterministic:** `chronicler improve` is allowed to repair structure, backfill high-confidence relationships, and queue high-signal questions with dedupe, but it should not silently do LLM prose rewrites.
 
 ## Stack
 

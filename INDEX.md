@@ -38,7 +38,7 @@ Quick reference for the repository.
 | `src/chronicler/gateway/` | LLM provider integration |
 | `src/chronicler/ingestion/` | PLAUD parsing plus general source parsing and conservative ingest classification |
 | `src/chronicler/extraction/` | Session and knowledge-source extraction prompts and orchestration |
-| `src/chronicler/vault/` | Obsidian integration, source archiving, additive note updates, deduplication, metrics |
+| `src/chronicler/vault/` | Obsidian integration, source archiving, additive note updates, deterministic normalization, deduplication, metrics |
 | `src/chronicler/retrieval/` | Embeddings, indexing, and retrieval |
 | `src/chronicler/chat/` | Textual chat interface |
 | `src/chronicler/reviewer/` | Vault review checks and reporting |
@@ -64,7 +64,7 @@ Quick reference for the repository.
 | `tests/models/` | Domain model tests |
 | `tests/retrieval/` | Embeddings and retrieval tests |
 | `tests/reviewer/` | Vault review tests |
-| `tests/vault/` | Obsidian, source archive, and vault manager tests |
+| `tests/vault/` | Obsidian, improver, source archive, and vault manager tests |
 | `tests/fixtures/` | Sample transcript, PDF, and golden extraction data |
 
 ## Historical Context

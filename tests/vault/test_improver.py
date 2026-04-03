@@ -44,7 +44,9 @@ class TestImproveVault:
             if call.args[0] == "Locations/Mist Alley.md"
         ][-1]
         assert 'parent_location: "[[Laguna Nera]]"' in updated
-        assert "**Contained In:** [[Laguna Nera]]" in updated
+        assert "connected_to:" not in updated
+        assert "**Belongs To:** [[Laguna Nera]]" in updated
+        assert "## Location Relationships" not in updated
 
     def test_improve_rebuilds_parent_contains_links_from_existing_locations(self):
         snapshot = {
@@ -85,6 +87,97 @@ class TestImproveVault:
             if call.args[0] == "Locations/Laguna Nera.md"
         ][-1]
         assert "**Contains:** [[Floating Market]], [[Mist Alley]]" in updated
+        assert "## Location Relationships" not in updated
+
+    def test_improve_removes_visible_source_update_sections_from_locations(self):
+        snapshot = {
+            "Locations/Laguna Nera.md": (
+                "---\n"
+                "type: location\n"
+                "name: Laguna Nera\n"
+                "---\n"
+                "# Laguna Nera\n\n"
+                "## Description\n\n"
+                "Original summary.\n\n"
+                "## Source Updates\n\n"
+                "<!-- chronicler:source-updates:start -->\n"
+                "### Imported source: Laguna Nera.md\n\n"
+                "A labyrinthine city of canals.\n"
+                "<!-- chronicler:source-updates:end -->\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Laguna Nera.md"
+        ][-1]
+        assert "## Source Updates" not in updated
+        assert "### Imported source:" not in updated
+        assert "A labyrinthine city of canals." in updated
+
+    def test_improve_cleans_malformed_source_update_labels_and_keeps_single_description_heading(self):
+        snapshot = {
+            "Locations/Anchor Bridge.md": (
+                "---\n"
+                "type: location\n"
+                "name: Anchor Bridge\n"
+                "---\n"
+                "# Anchor Bridge\n"
+                "**Belongs To:** [[Sestiere Aureo]]\n\n"
+                "## Description\n"
+                "A point of interest located within The Rusted Docks district of Laguna Nera.\n\n"
+                "## Source Updates\n\n"
+                "<!-- chronicler:source-updates:start -->\n"
+                "### Imported source: Laguna Nera.md\n\n"
+                "A location within Sestiere Aureo district.### [[Laguna Nera]].md\n\n"
+                "A landmark bridge over the canals.\n"
+                "<!-- chronicler:source-updates:end -->\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Anchor Bridge.md"
+        ][-1]
+        assert updated.count("## Description") == 1
+        assert "### [[Laguna Nera]].md" not in updated
+        assert "### Imported source:" not in updated
+        assert "A landmark bridge over the canals." in updated
+
+    def test_improve_cleans_inline_source_labels_already_baked_into_description(self):
+        snapshot = {
+            "Locations/Sestiere Aureo.md": (
+                "---\n"
+                "type: location\n"
+                "name: Sestiere Aureo\n"
+                'parent_location: "[[Laguna Nera]]"\n'
+                "---\n"
+                "# Sestiere Aureo\n\n"
+                "**Belongs To:** [[Laguna Nera]]\n\n"
+                "## Description\n\n"
+                "A district in Laguna Nera.### [[Laguna Nera]].md\n\n"
+                "A district in Laguna Nera, featuring golden architecture.\n"
+            ),
+        }
+        cli = _build_cli(snapshot)
+
+        improve_vault(cli)
+
+        updated = [
+            call.args[1]
+            for call in cli.create.call_args_list
+            if call.args[0] == "Locations/Sestiere Aureo.md"
+        ][-1]
+        assert "### [[Laguna Nera]].md" not in updated
+        assert updated.count("## Description") == 1
 
     def test_improve_links_body_mentions_from_canonical_note_names(self):
         snapshot = {

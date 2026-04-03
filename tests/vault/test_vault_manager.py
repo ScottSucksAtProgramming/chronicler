@@ -480,9 +480,9 @@ class TestWriteExtractionResult:
         create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
         updated = create_calls["Locations/Laguna Nera.md"]
         assert "Original city summary." in updated
-        assert "## Source Updates" in updated
-        assert "### Laguna Nera.md" in updated
         assert "A labyrinthine city of canals and underworld intrigue." in updated
+        assert "## Source Updates" not in updated
+        assert "### Laguna Nera.md" not in updated
 
     def test_write_source_ingest_result_updates_parent_location_with_contains_links(self, manager, mock_cli):
         parent_note = (
@@ -537,11 +537,11 @@ class TestWriteExtractionResult:
         create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
         updated_child = create_calls["Locations/Silkmarket District.md"]
         updated_parent = create_calls["Locations/Laguna Nera.md"]
-        assert "## Location Relationships" in updated_child
-        assert "**Contained In:** [[Laguna Nera]]" in updated_child
-        assert "**Adjacent To:** [[Harbor District]]" in updated_child
-        assert "## Location Relationships" in updated_parent
+        assert "**Belongs To:** [[Laguna Nera]]" in updated_child
+        assert "**Nearby Locations:** [[Harbor District]]" in updated_child
         assert "**Contains:** [[Silkmarket District]]" in updated_parent
+        assert "## Location Relationships" not in updated_child
+        assert "## Location Relationships" not in updated_parent
 
     def test_write_source_ingest_result_preserves_existing_child_links_on_parent(self, manager, mock_cli):
         parent_note = (

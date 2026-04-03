@@ -55,7 +55,6 @@ _REFERENCE_SCALAR_KEYS = {
 _REFERENCE_LIST_KEYS = {
     "affiliations",
     "adjacent_to",
-    "connected_to",
     "known_members",
     "related_entities",
     "npcs",
@@ -266,7 +265,6 @@ def render_location_note(loc: Location, child_locations: list[str] | None = None
         aliases=loc.aliases,
         parent_location=loc.parent_location,
         adjacent_to=adjacency_links,
-        connected_to=loc.connected_to,
         tags=loc.tags,
     )
 
@@ -283,10 +281,10 @@ def render_location_note(loc: Location, child_locations: list[str] | None = None
         body_lines.append(f"**Aliases:** {', '.join(loc.aliases)}")
 
     if loc.parent_location:
-        body_lines.append(f"**Contained In:** {wikify(loc.parent_location)}")
+        body_lines.append(f"**Belongs To:** {wikify(loc.parent_location)}")
 
     if adjacency_links:
-        body_lines.append(f"**Adjacent To:** {wikify(adjacency_links)}")
+        body_lines.append(f"**Nearby Locations:** {wikify(adjacency_links)}")
 
     if child_locations:
         body_lines.append(f"**Contains:** {wikify(child_locations)}")

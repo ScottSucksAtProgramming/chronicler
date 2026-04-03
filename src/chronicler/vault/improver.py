@@ -140,6 +140,8 @@ def _refresh_location_relationships(snapshot: dict[str, str]) -> dict[str, str]:
             continue
         frontmatter = _parse_frontmatter(content)
         body = _strip_frontmatter(content)
+        body = _merge_source_updates_into_description(body)
+        body = _sanitize_location_body(body)
         name = _canonical_name(path, frontmatter)
         parent = _infer_parent_location(frontmatter, body, name)
         location_data[path] = (frontmatter, body, name, parent)
@@ -149,11 +151,25 @@ def _refresh_location_relationships(snapshot: dict[str, str]) -> dict[str, str]:
     updates: dict[str, str] = {}
     for path, (frontmatter, body, name, parent) in location_data.items():
         updated_frontmatter = dict(frontmatter)
+        adjacency = updated_frontmatter.pop("adjacent_to", None)
+        connected = updated_frontmatter.pop("connected_to", None)
+        nearby = adjacency or connected or []
+        if isinstance(nearby, list):
+            nearby = [_strip_wikilink(str(item)) for item in nearby]
+            if parent:
+                nearby = [item for item in nearby if _strip_wikilink(item) != parent]
+            if nearby:
+                updated_frontmatter["adjacent_to"] = nearby
         if parent:
             updated_frontmatter["parent_location"] = parent
 
         child_locations = sorted(set(children_by_parent.get(name, [])))
-        updated_body = _upsert_location_relationship_section(body, parent, child_locations)
+        updated_body = _upsert_location_relationship_section(
+            body,
+            parent,
+            child_locations,
+            nearby if isinstance(nearby, list) else [],
+        )
         rebuilt = _frontmatter(**updated_frontmatter)
         if updated_body and not updated_body.startswith("\n"):
             candidate = f"{rebuilt}\n{updated_body}"
@@ -170,7 +186,7 @@ def _infer_parent_location(frontmatter: dict, body: str, name: str) -> str | Non
     if isinstance(parent, str) and parent.strip():
         return _strip_wikilink(parent.strip())
 
-    contained_match = re.search(r"\*\*Contained In:\*\*\s+\[\[([^\]]+)\]\]", body)
+    contained_match = re.search(r"\*\*(?:Contained In|Belongs To):\*\*\s+\[\[([^\]]+)\]\]", body)
     if contained_match:
         return _strip_wikilink(contained_match.group(1))
 
@@ -190,39 +206,51 @@ def _infer_parent_location(frontmatter: dict, body: str, name: str) -> str | Non
     return None
 
 
-def _upsert_location_relationship_section(body: str, parent: str | None, child_locations: list[str]) -> str:
-    """Insert or replace a managed location-relationship section in note body."""
-    managed_header = "## Location Relationships"
-    start_marker = "<!-- chronicler:location-relationships:start -->"
-    end_marker = "<!-- chronicler:location-relationships:end -->"
-
-    body_without_section = re.sub(
-        rf"\n*{re.escape(managed_header)}\n\n{re.escape(start_marker)}\n.*?\n{re.escape(end_marker)}\n*",
+def _upsert_location_relationship_section(
+    body: str,
+    parent: str | None,
+    child_locations: list[str],
+    nearby_locations: list[str],
+) -> str:
+    """Place location relationships in the top note metadata block."""
+    body = re.sub(
+        r"\n*## Location Relationships\n\n<!-- chronicler:location-relationships:start -->\n.*?\n<!-- chronicler:location-relationships:end -->\n*",
         "\n\n",
         body,
         flags=re.DOTALL,
-    ).rstrip()
-
-    lines: list[str] = []
-    if parent:
-        lines.append(f"**Contained In:** [[{parent}]]")
-    if child_locations:
-        lines.append(f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}")
-
-    if not lines:
-        return body_without_section + ("\n" if body_without_section else "")
-
-    section = "\n\n".join(
-        [
-            managed_header,
-            start_marker,
-            "\n".join(lines),
-            end_marker,
-        ]
     )
-    if not body_without_section:
-        return section + "\n"
-    return body_without_section + "\n\n" + section + "\n"
+    lines = body.splitlines()
+    skip_prefixes = (
+        "**Connected To:**",
+        "**Contained In:**",
+        "**Adjacent To:**",
+        "**Belongs To:**",
+        "**Nearby Locations:**",
+        "**Contains:**",
+    )
+    filtered = [line for line in lines if not line.strip().startswith(skip_prefixes)]
+    relationship_lines: list[str] = []
+    if parent:
+        relationship_lines.append(f"**Belongs To:** [[{parent}]]")
+    if child_locations:
+        relationship_lines.append(f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}")
+    if nearby_locations:
+        relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in nearby_locations)}")
+    if not relationship_lines:
+        return "\n".join(filtered).rstrip() + "\n"
+    title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+    if title_idx is None:
+        return "\n".join(filtered).rstrip() + "\n"
+    insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+    while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
+        insert_at += 1
+    if insert_at < len(filtered) and filtered[insert_at] != "":
+        filtered.insert(insert_at, "")
+    for offset, line in enumerate(relationship_lines):
+        filtered.insert(insert_at + offset, line)
+    if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+        filtered.insert(insert_at + len(relationship_lines), "")
+    return "\n".join(filtered).rstrip() + "\n"
 
 
 def _extract_section(body: str, heading: str) -> str:
@@ -248,6 +276,60 @@ def _strip_wikilink(value: str) -> str:
     if "|" in cleaned:
         cleaned = cleaned.split("|", 1)[0].strip()
     return cleaned
+
+
+def _merge_source_updates_into_description(body: str) -> str:
+    """Remove visible source-update sections and fold their prose into Description."""
+    pattern = re.compile(
+        r"\n*## Source Updates\n\n<!-- chronicler:source-updates:start -->\n(.*?)\n<!-- chronicler:source-updates:end -->\n*",
+        re.DOTALL,
+    )
+    match = pattern.search(body)
+    if not match:
+        return body
+
+    source_block = match.group(1)
+    source_block = re.sub(r"(?<!\n)(###\s+)", r"\n\1", source_block)
+    paragraphs = []
+    for paragraph in re.split(r"\n\s*\n", source_block):
+        cleaned = re.sub(r"^### .*$", "", paragraph, flags=re.MULTILINE).strip()
+        if cleaned:
+            paragraphs.append(cleaned)
+
+    body_without_block = pattern.sub("\n\n", body).rstrip()
+    if not paragraphs:
+        return body_without_block + ("\n" if body_without_block else "")
+
+    description_addition = "\n\n".join(paragraphs)
+    if "## Description\n" in body_without_block:
+        section_pattern = re.compile(r"(## Description\n(?:\n)?)(.*?)(\n## |\Z)", re.DOTALL)
+        match = section_pattern.search(body_without_block)
+        if match:
+            existing_description = match.group(2).rstrip()
+            merged_description = existing_description
+            if description_addition not in existing_description:
+                merged_description = (
+                    existing_description if not existing_description else f"{existing_description}\n\n{description_addition}"
+                )
+            replacement = f"{match.group(1)}{merged_description}{match.group(3)}"
+            return section_pattern.sub(replacement, body_without_block, count=1).rstrip() + "\n"
+
+    return body_without_block + f"\n\n## Description\n\n{description_addition}\n"
+
+
+def _sanitize_location_body(body: str) -> str:
+    """Remove stale inline source labels and collapse duplicate description headings."""
+    cleaned = re.sub(r"###\s+(?:Imported source:[^\n]*|\[\[[^\]]+\]\]\.md)", "", body)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+
+    parts = re.split(r"\n## Description\n(?:\n)?", cleaned)
+    if len(parts) <= 2:
+        return cleaned
+
+    prefix = parts[0]
+    description_parts = [part.strip() for part in parts[1:] if part.strip()]
+    merged_description = "\n\n".join(description_parts)
+    return prefix.rstrip() + "\n\n## Description\n\n" + merged_description + "\n"
 
 
 def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:

@@ -328,47 +328,11 @@ class VaultManager:
         source_label: str,
         description: str | None,
     ) -> str:
-        """Return note content with an updated managed source-update section."""
-
-        managed_header = "## Source Updates"
-        start_marker = "<!-- chronicler:source-updates:start -->"
-        end_marker = "<!-- chronicler:source-updates:end -->"
-        entry_lines = [f"### {source_label}"]
-        if description:
-            entry_lines += ["", description]
-        entry = "\n".join(entry_lines).strip()
-
-        block_pattern = re.compile(
-            rf"{re.escape(start_marker)}\n?(.*)\n?{re.escape(end_marker)}",
-            re.DOTALL,
-        )
-        entry_pattern = re.compile(
-            rf"(?ms)^### {re.escape(source_label)}\n.*?(?=^### |\Z)"
-        )
-
-        if start_marker in existing and end_marker in existing:
-            match = block_pattern.search(existing)
-            if match:
-                block_content = match.group(1).strip()
-                if entry_pattern.search(block_content):
-                    new_block = entry_pattern.sub(entry, block_content).strip()
-                else:
-                    new_block = "\n\n".join(part for part in [block_content, entry] if part).strip()
-                updated = block_pattern.sub(
-                    f"{start_marker}\n{new_block}\n{end_marker}",
-                    existing,
-                )
-                return updated
-
-        section = "\n\n".join(
-            [
-                managed_header,
-                start_marker,
-                entry,
-                end_marker,
-            ]
-        )
-        return existing.rstrip() + "\n\n" + section + "\n"
+        """Merge imported descriptive text into the note without visible source labels."""
+        if not description:
+            return self._strip_source_update_block(existing)
+        cleaned = self._strip_source_update_block(existing)
+        return self._append_description_paragraph(cleaned, description)
 
     def _merge_location_relationships(self, path: str, loc: Location, child_locations: list[str] | None = None) -> None:
         """Append or replace a managed location-relationship section."""
@@ -386,33 +350,19 @@ class VaultManager:
         loc: Location,
         child_locations: list[str] | None = None,
     ) -> str:
-        """Return note content with an updated managed location-relationship section."""
+        """Return note content with location relationships surfaced in the top metadata block."""
 
         adjacency_links = loc.adjacent_to or loc.connected_to
         relationship_lines: list[str] = []
         if loc.parent_location:
-            relationship_lines.append(f"**Contained In:** [[{loc.parent_location}]]")
+            relationship_lines.append(f"**Belongs To:** [[{loc.parent_location}]]")
         if adjacency_links:
-            relationship_lines.append(f"**Adjacent To:** {', '.join(f'[[{name}]]' for name in adjacency_links)}")
+            relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in adjacency_links)}")
         if child_locations:
             relationship_lines.append(f"**Contains:** {', '.join(f'[[{name}]]' for name in child_locations)}")
 
-        if not relationship_lines:
-            return existing
-
-        managed_header = "## Location Relationships"
-        start_marker = "<!-- chronicler:location-relationships:start -->"
-        end_marker = "<!-- chronicler:location-relationships:end -->"
-        block = "\n".join(relationship_lines)
-        section = "\n\n".join([managed_header, start_marker, block, end_marker])
-        pattern = re.compile(
-            rf"{re.escape(managed_header)}\n\n{re.escape(start_marker)}\n.*?\n{re.escape(end_marker)}",
-            re.DOTALL,
-        )
-
-        if start_marker in existing and end_marker in existing:
-            return pattern.sub(section, existing)
-        return existing.rstrip() + "\n\n" + section + "\n"
+        cleaned = self._strip_location_relationship_block(existing)
+        return self._upsert_location_summary_lines(cleaned, relationship_lines)
 
     def _sync_parent_location_relationships(self, loc: Location) -> None:
         """Update the location itself and its parent note with navigable relationship links."""
@@ -440,7 +390,10 @@ class VaultManager:
                 continue
             fm = self._parse_frontmatter(content)
             parent_value = fm.get("parent_location")
-            body_matches_parent = f"**Contained In:** [[{parent_name}]]" in content
+            body_matches_parent = (
+                f"**Belongs To:** [[{parent_name}]]" in content
+                or f"**Contained In:** [[{parent_name}]]" in content
+            )
             if parent_value == f"[[{parent_name}]]" or parent_value == parent_name or body_matches_parent:
                 name = fm.get("name")
                 if name:
@@ -451,6 +404,84 @@ class VaultManager:
                 children.append(name)
 
         return sorted(children)
+
+    @staticmethod
+    def _strip_source_update_block(content: str) -> str:
+        content = re.sub(
+            r"\n*## Source Updates\n\n<!-- chronicler:source-updates:start -->\n.*?\n<!-- chronicler:source-updates:end -->\n*",
+            "\n\n",
+            content,
+            flags=re.DOTALL,
+        )
+        return content.rstrip() + "\n"
+
+    @staticmethod
+    def _append_description_paragraph(content: str, description: str) -> str:
+        if description in content:
+            return content
+        if "\n## Description\n" in content:
+            pattern = re.compile(r"(\n## Description\n\n)(.*?)(\n## |\Z)", re.DOTALL)
+            match = pattern.search(content)
+            if match:
+                body = match.group(2).rstrip()
+                updated_body = body if not body else f"{body}\n\n{description}"
+                replacement = f"{match.group(1)}{updated_body}{match.group(3)}"
+                return pattern.sub(replacement, content, count=1)
+        return content.rstrip() + f"\n\n## Description\n\n{description}\n"
+
+    @staticmethod
+    def _strip_location_relationship_block(content: str) -> str:
+        content = re.sub(
+            r"\n*## Location Relationships\n\n<!-- chronicler:location-relationships:start -->\n.*?\n<!-- chronicler:location-relationships:end -->\n*",
+            "\n\n",
+            content,
+            flags=re.DOTALL,
+        )
+        return content
+
+    @staticmethod
+    def _upsert_location_summary_lines(content: str, relationship_lines: list[str]) -> str:
+        lines = content.splitlines()
+        if not lines:
+            return content
+
+        filtered: list[str] = []
+        skip_prefixes = (
+            "**Connected To:**",
+            "**Contained In:**",
+            "**Adjacent To:**",
+            "**Belongs To:**",
+            "**Nearby Locations:**",
+            "**Contains:**",
+        )
+        for line in lines:
+            if line.strip().startswith(skip_prefixes):
+                continue
+            filtered.append(line)
+
+        if not relationship_lines:
+            return "\n".join(filtered).rstrip() + "\n"
+
+        insert_at = None
+        blank_seen_after_title = False
+        for idx, line in enumerate(filtered):
+            if idx == 0:
+                continue
+            if filtered[0].startswith("---"):
+                continue
+        title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+        if title_idx is None:
+            return "\n".join(filtered).rstrip() + "\n"
+        insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+        while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
+            insert_at += 1
+        if insert_at < len(filtered) and filtered[insert_at] != "":
+            filtered.insert(insert_at, "")
+        for offset, line in enumerate(relationship_lines):
+            filtered.insert(insert_at + offset, line)
+        if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+            filtered.insert(insert_at + len(relationship_lines), "")
+        return "\n".join(filtered).rstrip() + "\n"
 
     # ------------------------------------------------------------------
     # Index updates

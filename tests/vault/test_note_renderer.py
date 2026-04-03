@@ -133,7 +133,7 @@ class TestRenderLocation:
         md = render_location_note(loc)
         assert "# The Black Spire" in md
         assert "type: location" in md
-        assert "[[Underground Tunnels]]" in md
+        assert "**Nearby Locations:** [[Underground Tunnels]]" in md
         assert "A cult site in the swamp." in md
 
     def test_location_frontmatter_reference_fields_are_quoted_wikilinks(self):
@@ -144,7 +144,8 @@ class TestRenderLocation:
         )
         md = render_location_note(loc)
         assert 'first_appeared: "[[Session-022]]"' in md
-        assert 'connected_to: ["[[Underground Tunnels]]"]' in md
+        assert 'adjacent_to: ["[[Underground Tunnels]]"]' in md
+        assert "connected_to:" not in md
 
     def test_render_location_with_source_attribution_without_session(self):
         loc = Location(
@@ -166,9 +167,10 @@ class TestRenderLocation:
         md = render_location_note(loc, child_locations=["Market Square", "Old Mint"])
         assert 'parent_location: "[[Laguna Nera]]"' in md
         assert 'adjacent_to: ["[[Harbor District]]", "[[Temple Ward]]"]' in md
-        assert "**Contained In:** [[Laguna Nera]]" in md
-        assert "**Adjacent To:** [[Harbor District]], [[Temple Ward]]" in md
+        assert "**Belongs To:** [[Laguna Nera]]" in md
+        assert "**Nearby Locations:** [[Harbor District]], [[Temple Ward]]" in md
         assert "**Contains:** [[Market Square]], [[Old Mint]]" in md
+        assert "## Location Relationships" not in md
 
 
 class TestRenderFaction:

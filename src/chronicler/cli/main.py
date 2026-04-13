@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,8 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
-from chronicler.config.files import get_field_sources
+from chronicler.config.files import get_field_sources, write_config_file
+from chronicler.config.paths import get_config_path
 from chronicler.config.settings import Settings
 from chronicler.extraction.source_extractor import extract_source_document
 from chronicler.gateway.llm_gateway import LLMGateway
@@ -94,6 +96,35 @@ def _format_source_annotation(field_sources: dict[str, str], field_name: str) ->
     if source == "default":
         return " (default)"
     return ""
+
+
+def _mask_api_key(api_key: str) -> str:
+    if not api_key:
+        return "(not set)"
+
+    return f"***{api_key[-4:]}"
+
+
+def _prompt_existing_path(prompt: str) -> Path:
+    while True:
+        value = Path(typer.prompt(prompt)).expanduser()
+        if value.exists():
+            return value
+        console.print(f"[red]Path does not exist: {value}[/red]")
+
+
+def _prompt_provider() -> str:
+    valid_providers = {"kimi", "nanogpt"}
+    while True:
+        provider = typer.prompt("LLM provider", default="kimi").strip().lower()
+        if provider in valid_providers:
+            return provider
+        console.print("[red]Please enter either 'kimi' or 'nanogpt'.[/red]")
+
+
+def _prompt_optional_value(prompt: str, default: str) -> tuple[str, bool]:
+    value = typer.prompt(prompt, default=default)
+    return value, value != default
 
 
 def _record_session_metric(
@@ -889,7 +920,7 @@ def config_show() -> None:
             )
             console.print(
                 "  API key:          "
-                f"{'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}"
+                f"{_mask_api_key(settings.nanogpt_api_key)}"
                 f"{_format_source_annotation(field_sources, 'nanogpt_api_key')}"
             )
         console.print(
@@ -930,6 +961,99 @@ def config_show() -> None:
         console.print("\nRun the config wizard to create your settings file:")
         console.print("  chronicler config init")
         raise typer.Exit(1)
+
+
+@config_app.command("init")
+def config_init() -> None:
+    """Create or update the persistent config file via an interactive wizard."""
+    config_path = get_config_path()
+    if config_path.exists():
+        console.print(f"[yellow]Config file already exists: {config_path}[/yellow]")
+        if not typer.confirm("Overwrite the existing config file?", default=False):
+            console.print("Aborted.")
+            raise typer.Exit()
+
+    vault_path = _prompt_existing_path("Vault path")
+    vault_name = typer.prompt("Vault name", default=vault_path.name).strip()
+    llm_provider = _prompt_provider()
+
+    config_values: dict[str, object] = {
+        "vault_path": str(vault_path),
+        "vault_name": vault_name,
+        "llm_provider": llm_provider,
+    }
+
+    nanogpt_model = Settings.model_fields["nanogpt_model"].default
+    lm_studio_base_url = Settings.model_fields["lm_studio_base_url"].default
+    embedding_model = Settings.model_fields["embedding_model"].default
+    log_level = Settings.model_fields["log_level"].default
+
+    if llm_provider == "nanogpt":
+        config_values["nanogpt_api_key"] = typer.prompt(
+            "nano-gpt API key",
+            hide_input=True,
+        ).strip()
+        selected_model, should_write_model = _prompt_optional_value(
+            "nano-gpt model",
+            nanogpt_model,
+        )
+        if should_write_model:
+            config_values["nanogpt_model"] = selected_model
+    else:
+        if shutil.which("kimi") is None:
+            console.print(
+                "[yellow]Warning: kimi was not found on PATH. "
+                "You can still save the config and install it later.[/yellow]"
+            )
+
+    selected_base_url, should_write_base_url = _prompt_optional_value(
+        "LM Studio base URL",
+        lm_studio_base_url,
+    )
+    if should_write_base_url:
+        config_values["lm_studio_base_url"] = selected_base_url
+
+    selected_embedding_model, should_write_embedding_model = _prompt_optional_value(
+        "Embedding model",
+        embedding_model,
+    )
+    if should_write_embedding_model:
+        config_values["embedding_model"] = selected_embedding_model
+
+    selected_log_level, should_write_log_level = _prompt_optional_value(
+        "Log level",
+        log_level,
+    )
+    if should_write_log_level:
+        config_values["log_level"] = selected_log_level
+
+    console.print("\n[bold]Configuration Summary[/bold]")
+    console.print(f"  Config path:      {config_path}")
+    console.print(f"  Vault path:       {vault_path}")
+    console.print(f"  Vault name:       {vault_name}")
+    console.print(f"  LLM provider:     {llm_provider}")
+    if llm_provider == "nanogpt":
+        console.print(f"  nano-gpt model:   {config_values.get('nanogpt_model', nanogpt_model)}")
+        console.print(
+            f"  API key:          {_mask_api_key(str(config_values['nanogpt_api_key']))}"
+        )
+    else:
+        console.print("  Kimi model:       (default)")
+    console.print(
+        f"  LM Studio URL:    {config_values.get('lm_studio_base_url', lm_studio_base_url)}"
+    )
+    console.print(
+        "  Embedding model:  "
+        f"{config_values.get('embedding_model', embedding_model)}"
+    )
+    console.print(f"  Log level:        {config_values.get('log_level', log_level)}")
+
+    if not typer.confirm("Write this configuration?", default=True):
+        console.print("Aborted.")
+        raise typer.Exit()
+
+    write_config_file(config_values)
+    console.print(f"[green]Config saved to:[/green] {config_path}", soft_wrap=True)
 
 
 @app.command()

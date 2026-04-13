@@ -328,6 +328,7 @@ Install the Kimi CLI and ensure the `kimi` command is on your `PATH`.
 - Source code lives under `src/chronicler/`
 - Tests live under `tests/`
 - Historical discovery and planning docs live under `docs/`
+- Architecture overview: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - A quick file map lives in `INDEX.md`
 
 ## Project Status

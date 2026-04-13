@@ -17,6 +17,7 @@ Quick reference for the repository.
 | File | Purpose |
 |------|---------|
 | `docs/interview-notes.md` | Original discovery notes and project context |
+| `docs/ARCHITECTURE.md` | Public-facing high-level architecture overview for contributors |
 | `docs/superpowers/specs/2026-04-02-session-scribe-design.md` | Historical primary architecture spec created before the rename |
 | `docs/superpowers/specs/2026-04-02-chronicler-rename-and-docs-design.md` | Rename and documentation design for the Chronicler transition |
 | `docs/superpowers/specs/2026-04-03-hybrid-chat-vault-reads-design.md` | Hybrid chat design that combines direct vault reads with retrieval |
@@ -50,7 +51,7 @@ Quick reference for the repository.
 |------|---------|
 | `context/conventions.md` | Working conventions, testing expectations, and repo norms |
 | `context/lessons.md` | Running development lessons and non-obvious discoveries |
-| `LICENSE` | MIT license |
+| `LICENSE` | GNU AGPL v3-or-later license |
 
 ## Tests And Fixtures
 

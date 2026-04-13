@@ -1756,8 +1756,8 @@ def config() -> None:
             console.print(f"\n[green]Vault path exists.[/green]")
     except Exception as e:
         console.print(f"[red]Configuration error: {e}[/red]")
-        console.print("\nCopy .env.example to .env and fill in your values:")
-        console.print("  cp .env.example .env")
+        console.print("\nRun the config wizard to create your settings file:")
+        console.print("  chronicler config init")
         raise typer.Exit(1)
 
 
@@ -1795,7 +1795,7 @@ git commit -m "feat: add CLI entry point with typer — ingest, chat, review, as
 - [ ] **Step 1: Create .env.example**
 
 ```bash
-# .env.example — copy to .env and fill in your values
+# .env.example — reference-only environment variable documentation
 SCRIBE_VAULT_PATH=/path/to/your/obsidian/campaign/vault
 SCRIBE_NANOGPT_API_KEY=your-nanogpt-api-key-here
 SCRIBE_NANOGPT_MODEL=chatgpt-4o-latest

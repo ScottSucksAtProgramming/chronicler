@@ -89,46 +89,36 @@ uv tool uninstall chronicler
 
 ## Configuration
 
-Start from the example file:
+Initialize the persistent config file with the built-in wizard:
 
 ```bash
-cp .env.example .env
+uv run chronicler config init
 ```
 
-Required settings:
+By default Chronicler stores `config.toml` in the standard user config directory for your OS:
 
-```env
-CHRONICLER_VAULT_PATH=/absolute/path/to/your/obsidian/vault
-CHRONICLER_VAULT_NAME=My Campaign Vault
-CHRONICLER_LLM_PROVIDER=kimi
-```
+- macOS: `~/Library/Application Support/chronicler/config.toml`
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/chronicler/config.toml`
+- Windows: `%APPDATA%\chronicler\config.toml`
 
-If you use `nanogpt`, also set:
+The wizard collects the required settings for you and can also capture optional overrides for LM Studio, embeddings, and logging.
 
-```env
-CHRONICLER_NANOGPT_API_KEY=your-api-key
-CHRONICLER_NANOGPT_MODEL=chatgpt-4o-latest
-```
-
-If you want retrieval and chat, make sure LM Studio is running and confirm these settings match your local setup:
-
-```env
-CHRONICLER_LM_STUDIO_BASE_URL=http://localhost:1234/v1
-CHRONICLER_EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
-```
-
-Check your config:
+Inspect the active configuration at any time:
 
 ```bash
-uv run chronicler config
+uv run chronicler config show
 ```
+
+Bare `uv run chronicler config` still works and behaves the same as `config show`.
+
+Environment variables prefixed with `CHRONICLER_` still override the config file for CI, scripts, and temporary overrides. `.env.example` remains in the repo as a reference document for those environment variable names.
 
 ## Getting Started
 
 Recommended first-run flow:
 
 1. Create or choose an Obsidian vault for your campaign.
-2. Fill out `.env`.
+2. Run `uv run chronicler config init`.
 3. Run `uv run chronicler init`.
 4. Add your party members with `chronicler party add`.
 5. Ingest one session with `chronicler ingest`.
@@ -271,9 +261,13 @@ Rebuilds the embedding index used by retrieval and chat.
 
 Launches the interactive campaign Q&A TUI.
 
-### `chronicler config`
+### `chronicler config show`
 
 Prints active configuration and validates the vault path.
+
+### `chronicler config init`
+
+Runs the interactive wizard that writes `config.toml`.
 
 ### `chronicler stats`
 
@@ -300,7 +294,7 @@ For active campaign use:
 
 ### `CHRONICLER_VAULT_NAME is not set`
 
-Add `CHRONICLER_VAULT_NAME` to `.env`. This must match the vault name Obsidian CLI uses, not just the filesystem folder name.
+Run `chronicler config init` and make sure the saved `vault_name` matches the vault name Obsidian CLI uses, not just the filesystem folder name.
 
 ### Obsidian CLI errors
 
@@ -309,11 +303,11 @@ Make sure:
 - Obsidian desktop is installed
 - the app is running
 - the configured vault exists
-- the vault name in `.env` matches the one shown in Obsidian
+- the `vault_name` in `config.toml` matches the one shown in Obsidian
 
 ### LM Studio connection errors
 
-`chat` and `reindex` require LM Studio to be running with an embedding model loaded. Verify the base URL and model name in `.env`.
+`chat` and `reindex` require LM Studio to be running with an embedding model loaded. Verify the base URL and model name in `config.toml`.
 
 ### nano-gpt provider errors
 

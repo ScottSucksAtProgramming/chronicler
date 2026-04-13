@@ -61,3 +61,4 @@ class TestInitCommand:
 
         assert result.exit_code == 1
         assert "error" in result.output.lower()
+        assert "chronicler config init" in result.output

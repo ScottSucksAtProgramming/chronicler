@@ -1,6 +1,6 @@
 # Chronicler
 
-[![CI](https://github.com/scottkostolni/chronicler/actions/workflows/ci.yml/badge.svg)](https://github.com/scottkostolni/chronicler/actions/workflows/ci.yml)
+[![CI](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml/badge.svg)](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/chronicler)](https://pypi.org/project/chronicler/)
 
 Chronicler is a local-first CLI for turning tabletop RPG session exports into an Obsidian campaign vault. It ingests PLAUD summary PDFs and transcript text files, extracts campaign entities with an LLM, writes linked notes into your vault, builds a local retrieval index, and gives you a chat interface over your campaign history.

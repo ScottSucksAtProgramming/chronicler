@@ -4,7 +4,7 @@ Thanks for your interest in contributing to Chronicler.
 
 ## Before You Start
 
-- Use the issue tracker for bug reports and feature requests: <https://github.com/scottkostolni/chronicler/issues>
+- Use the issue tracker for bug reports and feature requests: <https://github.com/ScottSucksAtProgramming/chronicler/issues>
 - Open an issue before starting significant feature work so scope and approach are aligned before implementation starts.
 - Keep changes focused. Small, reviewable pull requests move faster than broad refactors.
 

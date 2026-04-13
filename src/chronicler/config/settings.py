@@ -1,8 +1,15 @@
-"""Application configuration loaded from environment variables or explicit values."""
+"""Application configuration loaded from kwargs, environment variables, or TOML."""
 
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
+
+from chronicler.config.paths import get_config_path
 
 
 class Settings(BaseSettings):
@@ -14,9 +21,23 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="CHRONICLER_",
-        env_file=".env",
-        env_file_encoding="utf-8",
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            env_settings,
+            TomlConfigSettingsSource(settings_cls, toml_file=get_config_path()),
+            file_secret_settings,
+        )
 
     # Required
     vault_path: Path

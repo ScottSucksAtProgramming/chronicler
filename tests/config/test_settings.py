@@ -10,8 +10,9 @@ from chronicler.config.settings import Settings
 
 
 @pytest.fixture(autouse=True)
-def reset_config_path():
-    set_config_path(None)
+def isolate_config_path(tmp_path):
+    """Point config path at a non-existent temp file so tests are isolated from the real config."""
+    set_config_path(tmp_path / "config.toml")
     yield
     set_config_path(None)
 

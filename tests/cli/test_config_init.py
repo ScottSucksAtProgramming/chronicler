@@ -86,20 +86,28 @@ class TestConfigInitCommand:
         assert "does not exist" in result.output
         assert config_path.exists()
 
-    def test_config_init_warns_before_overwriting_existing_file(self, tmp_path):
+    def test_config_init_updates_existing_file_with_prefilled_defaults(self, tmp_path):
         vault_path = tmp_path / "campaign-vault"
         vault_path.mkdir()
         config_path = tmp_path / "config.toml"
-        config_path.write_text('vault_path = "/tmp/original"\n', encoding="utf-8")
+        config_path.write_text(
+            f'vault_path = "{vault_path}"\nvault_name = "My Campaign"\nllm_provider = "kimi"\n',
+            encoding="utf-8",
+        )
         set_config_path(config_path)
 
-        result = runner.invoke(app, ["config", "init"], input="n\n")
-
-        assert result.exit_code == 0
-        assert (
-            config_path.read_text(encoding="utf-8") == 'vault_path = "/tmp/original"\n'
+        # Press Enter for all prompts to accept existing defaults, then confirm write
+        result = runner.invoke(
+            app,
+            ["config", "init"],
+            input=_wizard_input("", "", "kimi", "", "", "", "y"),
         )
-        assert "already exists" in result.output
+
+        assert result.exit_code == 0, result.output
+        assert "Updating existing config" in result.output
+        written = config_path.read_text(encoding="utf-8")
+        assert str(vault_path) in written
+        assert "My Campaign" in written
 
     def test_config_init_aborts_at_summary_without_writing(self, tmp_path):
         vault_path = tmp_path / "campaign-vault"

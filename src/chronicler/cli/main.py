@@ -11,7 +11,7 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
-from chronicler.config.files import get_field_sources, write_config_file
+from chronicler.config.files import get_field_sources, load_config_file, write_config_file
 from chronicler.config.paths import get_config_path
 from chronicler.config.settings import Settings
 from chronicler.extraction.source_extractor import extract_source_document
@@ -105,18 +105,19 @@ def _mask_api_key(api_key: str) -> str:
     return f"***{api_key[-4:]}"
 
 
-def _prompt_existing_path(prompt: str) -> Path:
+def _prompt_existing_path(prompt: str, default: str | None = None) -> Path:
     while True:
-        value = Path(typer.prompt(prompt)).expanduser()
+        raw = typer.prompt(prompt, default=default)
+        value = Path(raw).expanduser()
         if value.exists():
             return value
         console.print(f"[red]Path does not exist: {value}[/red]")
 
 
-def _prompt_provider() -> str:
+def _prompt_provider(default: str = "kimi") -> str:
     valid_providers = {"kimi", "nanogpt"}
     while True:
-        provider = typer.prompt("LLM provider", default="kimi").strip().lower()
+        provider = typer.prompt("LLM provider", default=default).strip().lower()
         if provider in valid_providers:
             return provider
         console.print("[red]Please enter either 'kimi' or 'nanogpt'.[/red]")
@@ -963,15 +964,22 @@ def config_show() -> None:
 def config_init() -> None:
     """Create or update the persistent config file via an interactive wizard."""
     config_path = get_config_path()
-    if config_path.exists():
-        console.print(f"[yellow]Config file already exists: {config_path}[/yellow]")
-        if not typer.confirm("Overwrite the existing config file?", default=False):
-            console.print("Aborted.")
-            raise typer.Exit()
+    existing = load_config_file()
 
-    vault_path = _prompt_existing_path("Vault path")
-    vault_name = typer.prompt("Vault name", default=vault_path.name).strip()
-    llm_provider = _prompt_provider()
+    if existing:
+        console.print(f"Updating existing config: [bold]{config_path}[/bold]")
+        console.print("Press Enter to keep each current value.\n")
+    else:
+        console.print(f"Creating new config at: [bold]{config_path}[/bold]\n")
+
+    existing_vault_path = str(existing.get("vault_path", "")) or None
+    vault_path = _prompt_existing_path("Vault path", default=existing_vault_path)
+
+    existing_vault_name = str(existing.get("vault_name", "")) or vault_path.name
+    vault_name = typer.prompt("Vault name", default=existing_vault_name).strip()
+
+    existing_provider = str(existing.get("llm_provider", "kimi"))
+    llm_provider = _prompt_provider(default=existing_provider)
 
     config_values: dict[str, object] = {
         "vault_path": str(vault_path),
@@ -979,19 +987,31 @@ def config_init() -> None:
         "llm_provider": llm_provider,
     }
 
-    nanogpt_model = Settings.model_fields["nanogpt_model"].default
-    lm_studio_base_url = Settings.model_fields["lm_studio_base_url"].default
-    embedding_model = Settings.model_fields["embedding_model"].default
-    log_level = Settings.model_fields["log_level"].default
+    nanogpt_model_default = str(
+        existing.get("nanogpt_model", Settings.model_fields["nanogpt_model"].default)
+    )
+    lm_studio_base_url_default = str(
+        existing.get("lm_studio_base_url", Settings.model_fields["lm_studio_base_url"].default)
+    )
+    embedding_model_default = str(
+        existing.get("embedding_model", Settings.model_fields["embedding_model"].default)
+    )
+    log_level_default = str(
+        existing.get("log_level", Settings.model_fields["log_level"].default)
+    )
 
     if llm_provider == "nanogpt":
-        config_values["nanogpt_api_key"] = typer.prompt(
-            "nano-gpt API key",
+        existing_key = str(existing.get("nanogpt_api_key", ""))
+        key_hint = f" [{_mask_api_key(existing_key)}]" if existing_key else ""
+        new_key = typer.prompt(
+            f"nano-gpt API key{key_hint}",
+            default=existing_key,
             hide_input=True,
         ).strip()
+        config_values["nanogpt_api_key"] = new_key
         selected_model, should_write_model = _prompt_optional_value(
             "nano-gpt model",
-            nanogpt_model,
+            nanogpt_model_default,
         )
         if should_write_model:
             config_values["nanogpt_model"] = selected_model
@@ -1004,21 +1024,21 @@ def config_init() -> None:
 
     selected_base_url, should_write_base_url = _prompt_optional_value(
         "LM Studio base URL",
-        lm_studio_base_url,
+        lm_studio_base_url_default,
     )
     if should_write_base_url:
         config_values["lm_studio_base_url"] = selected_base_url
 
     selected_embedding_model, should_write_embedding_model = _prompt_optional_value(
         "Embedding model",
-        embedding_model,
+        embedding_model_default,
     )
     if should_write_embedding_model:
         config_values["embedding_model"] = selected_embedding_model
 
     selected_log_level, should_write_log_level = _prompt_optional_value(
         "Log level",
-        log_level,
+        log_level_default,
     )
     if should_write_log_level:
         config_values["log_level"] = selected_log_level
@@ -1030,7 +1050,7 @@ def config_init() -> None:
     console.print(f"  LLM provider:     {llm_provider}")
     if llm_provider == "nanogpt":
         console.print(
-            f"  nano-gpt model:   {config_values.get('nanogpt_model', nanogpt_model)}"
+            f"  nano-gpt model:   {config_values.get('nanogpt_model', nanogpt_model_default)}"
         )
         console.print(
             f"  API key:          {_mask_api_key(str(config_values['nanogpt_api_key']))}"
@@ -1038,13 +1058,13 @@ def config_init() -> None:
     else:
         console.print("  Kimi model:       (default)")
     console.print(
-        f"  LM Studio URL:    {config_values.get('lm_studio_base_url', lm_studio_base_url)}"
+        f"  LM Studio URL:    {config_values.get('lm_studio_base_url', lm_studio_base_url_default)}"
     )
     console.print(
         "  Embedding model:  "
-        f"{config_values.get('embedding_model', embedding_model)}"
+        f"{config_values.get('embedding_model', embedding_model_default)}"
     )
-    console.print(f"  Log level:        {config_values.get('log_level', log_level)}")
+    console.print(f"  Log level:        {config_values.get('log_level', log_level_default)}")
 
     if not typer.confirm("Write this configuration?", default=True):
         console.print("Aborted.")

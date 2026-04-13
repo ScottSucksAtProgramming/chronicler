@@ -1,7 +1,26 @@
 [project]
 name = "chronicler"
-version = "0.1.0"
-description = "Chronicler — AI agent for tabletop campaign note management"
+version = "1.0.0"
+description = "Local-first CLI for turning tabletop RPG session exports into an Obsidian campaign vault"
+authors = [
+    { name = "Scott Kostolni", email = "ScottKostolni+github@gmail.com" },
+]
+readme = "README.md"
+keywords = [
+    "dnd",
+    "obsidian",
+    "tabletop-rpg",
+    "campaign-notes",
+    "ai-agent",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment :: Role-Playing",
+]
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
 dependencies = [
@@ -16,6 +35,11 @@ dependencies = [
     "textual>=8.2.1",
     "chromadb>=1.5.5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/scottkostolni/chronicler"
+Repository = "https://github.com/scottkostolni/chronicler"
+Issues = "https://github.com/scottkostolni/chronicler/issues"
 
 [project.scripts]
 chronicler = "chronicler.cli.main:app"
@@ -37,6 +61,8 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "black>=25.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "ruff>=0.11",
 ]

@@ -304,6 +304,38 @@ class TestIngestCommand:
         mock_pipeline.assert_called_once()
         assert "Knowledge ingest complete" in result.output
 
+    def test_ingest_routes_anchored_markdown_note_to_source_pipeline(self, tmp_path):
+        note_file = tmp_path / "session-notes.md"
+        note_file.write_text("The marsh chapel hides the shrine entrance.", encoding="utf-8")
+
+        mock_result = MagicMock()
+        mock_result.npcs = []
+        mock_result.locations = [MagicMock()]
+        mock_result.factions = []
+        mock_result.loot = []
+        mock_result.plot_threads = []
+        mock_result.questions = []
+        mock_result.recap = None
+
+        with (
+            patch("chronicler.cli.main.parse_source_document") as mock_parse,
+            patch("chronicler.cli.main.classify_source_document") as mock_classify,
+            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=mock_result) as mock_source,
+            patch("chronicler.cli.main._run_ingest_pipeline") as mock_session,
+        ):
+            mock_parse.return_value = MagicMock()
+            mock_classify.return_value = MagicMock(
+                document_type="legacy_note",
+                confidence=0.9,
+                session_anchor=6,
+            )
+
+            result = runner.invoke(app, ["ingest", str(note_file), "--session", "6"])
+
+        assert result.exit_code == 0
+        mock_source.assert_called_once()
+        mock_session.assert_not_called()
+
     def test_ingest_routes_txt_legacy_note_to_source_pipeline(self, tmp_path):
         note_file = tmp_path / "notes.txt"
         note_file.write_text("Background lore from DM Jared about the marsh chapel.", encoding="utf-8")

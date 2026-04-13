@@ -27,6 +27,11 @@ class LLMGatewayError(Exception):
     """Raised when an LLM call fails after retries."""
 
 
+def _resolve_working_directory(settings: Settings):
+    """Run external model tools from the configured vault, not the repo."""
+    return settings.vault_path
+
+
 def _raise_for_filtered_content(content: str) -> None:
     lowered = content.lower()
     if "content_filter" in lowered or "considered high risk" in lowered:
@@ -98,6 +103,7 @@ class LLMGateway:
                     capture_output=True,
                     text=True,
                     timeout=self.settings.llm_timeout_seconds * 4,  # kimi can be slower
+                    cwd=_resolve_working_directory(self.settings),
                 ),
             )
             latency = time.monotonic() - start
@@ -284,6 +290,7 @@ class LLMGateway:
             capture_output=True,
             text=True,
             timeout=self.settings.llm_timeout_seconds * 4,
+            cwd=_resolve_working_directory(self.settings),
         )
         latency = time.monotonic() - start
 

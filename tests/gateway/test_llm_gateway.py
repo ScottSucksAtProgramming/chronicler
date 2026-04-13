@@ -1,6 +1,7 @@
 """Tests for the LLM Gateway."""
 
 import json
+from pathlib import Path
 import pytest
 import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -133,6 +134,46 @@ class TestLLMGateway:
                 await gateway.complete(
                     LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
                 )
+
+    @pytest.mark.asyncio
+    async def test_complete_kimi_runs_in_vault_directory(self, settings):
+        settings.llm_provider = "kimi"
+        settings.vault_path = Path("/tmp/chronicler-vault")
+        gateway = LLMGateway(settings)
+
+        completed = MagicMock(returncode=0, stdout="test response", stderr="")
+        captured = {}
+
+        def run_subprocess(_executor, func, *args):
+            captured["result"] = func()
+            return captured["result"]
+
+        with patch("subprocess.run", return_value=completed) as mock_run:
+            with patch("asyncio.get_event_loop") as mock_loop:
+                mock_loop.return_value.run_in_executor = AsyncMock(side_effect=run_subprocess)
+
+                result = await gateway.complete(
+                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
+                )
+
+        assert result.content == "test response"
+        assert captured["result"] is completed
+        assert mock_run.call_args.kwargs["cwd"] == settings.vault_path
+
+    def test_complete_kimi_sync_runs_in_vault_directory(self, settings):
+        settings.llm_provider = "kimi"
+        settings.vault_path = Path("/tmp/chronicler-vault")
+        gateway = LLMGateway(settings)
+
+        completed = MagicMock(returncode=0, stdout="test response", stderr="")
+
+        with patch("subprocess.run", return_value=completed) as mock_run:
+            result = gateway.complete_sync(
+                LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
+            )
+
+        assert result.content == "test response"
+        assert mock_run.call_args.kwargs["cwd"] == settings.vault_path
 
     @pytest.mark.asyncio
     async def test_complete_structured_parses_to_model(self, settings):

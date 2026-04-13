@@ -13,13 +13,6 @@ def classify_source_document(
     session_override: int | None,
 ) -> SourceClassification:
     """Classify a parsed source document for ingest routing."""
-    if session_override is not None:
-        return SourceClassification(
-            document_type=DocumentType.SESSION_SUPPORT,
-            confidence=1.0,
-            session_anchor=session_override,
-        )
-
     extracted = (document.extracted_text or "").strip().lower()
     filename = document.original_filename.lower()
     if document.media_type == "text/plain" and (
@@ -28,6 +21,7 @@ def classify_source_document(
         return SourceClassification(
             document_type=DocumentType.SESSION_TRANSCRIPT,
             confidence=0.95,
+            session_anchor=session_override,
         )
 
     if document.media_type == "application/pdf" and (
@@ -37,17 +31,20 @@ def classify_source_document(
         return SourceClassification(
             document_type=DocumentType.SESSION_SUMMARY,
             confidence=0.85,
+            session_anchor=session_override,
         )
 
     if not extracted or len(extracted) < 32:
         return SourceClassification(
             document_type=DocumentType.UNKNOWN,
             confidence=0.2,
+            session_anchor=session_override,
         )
 
     return SourceClassification(
         document_type=DocumentType.LEGACY_NOTE,
         confidence=0.8,
+        session_anchor=session_override,
     )
 
 

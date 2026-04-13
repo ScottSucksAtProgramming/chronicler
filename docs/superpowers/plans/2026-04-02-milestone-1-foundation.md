@@ -34,7 +34,7 @@
 - [ ] **Step 1: Initialize project with uv**
 
 ```bash
-cd /Users/scottkostolni/programming_projects/dnd_notes_organizaer
+cd /Users/scottkostolni/programming_projects/chronicler
 uv init --lib --name session-scribe
 ```
 

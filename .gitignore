@@ -52,3 +52,6 @@ _Agent/
 
 # Local git worktrees
 .worktrees/
+
+# Private article drafts
+docs/article-brainstorm.md

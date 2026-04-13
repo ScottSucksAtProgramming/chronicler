@@ -2,6 +2,7 @@
 name = "chronicler"
 version = "0.1.0"
 description = "Chronicler — AI agent for tabletop campaign note management"
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0",

@@ -67,7 +67,7 @@ class TestClassifySourceDocument:
         assert classification.confidence < 0.6
         assert is_ambiguous(classification)
 
-    def test_classifier_respects_explicit_session_override(self) -> None:
+    def test_classifier_anchors_legacy_note_without_retyping_it_as_session_support(self) -> None:
         document = SourceDocument(
             source_path=Path("notes/background.md"),
             original_filename="background.md",
@@ -77,6 +77,6 @@ class TestClassifySourceDocument:
 
         classification = classify_source_document(document, session_override=22)
 
-        assert classification.document_type == DocumentType.SESSION_SUPPORT
-        assert classification.confidence == 1.0
+        assert classification.document_type == DocumentType.LEGACY_NOTE
+        assert classification.confidence >= 0.7
         assert classification.session_anchor == 22

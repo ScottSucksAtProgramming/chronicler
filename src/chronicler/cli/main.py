@@ -10,6 +10,7 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
+from chronicler.config.files import get_field_sources
 from chronicler.config.settings import Settings
 from chronicler.extraction.source_extractor import extract_source_document
 from chronicler.gateway.llm_gateway import LLMGateway
@@ -34,7 +35,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 party_app = typer.Typer(help="Manage player characters.")
+config_app = typer.Typer(help="Inspect and manage configuration.")
 app.add_typer(party_app, name="party")
+app.add_typer(config_app, name="config")
 console = Console()
 _SESSION_FILE_SUFFIXES = {".pdf", ".txt"}
 _SOURCE_FILE_SUFFIXES = {".md", ".txt", ".pdf"}
@@ -82,6 +85,15 @@ def _confirm_ambiguous_source(file_path: Path) -> SourceClassification:
 def _metrics_path(settings: Settings) -> Path:
     """Return the metrics storage path inside the configured vault."""
     return settings.vault_path / ".chronicler" / "metrics.json"
+
+
+def _format_source_annotation(field_sources: dict[str, str], field_name: str) -> str:
+    source = field_sources[field_name]
+    if source == "env":
+        return " (from env)"
+    if source == "default":
+        return " (default)"
+    return ""
 
 
 def _record_session_metric(
@@ -465,8 +477,8 @@ def init() -> None:
         settings = Settings()
     except Exception as exc:
         console.print(f"[red]Configuration error: {exc}[/red]")
-        console.print("\nCopy .env.example to .env and fill in your values:")
-        console.print("  cp .env.example .env")
+        console.print("\nRun the config wizard to create your settings file:")
+        console.print("  chronicler config init")
         raise typer.Exit(1)
 
     if not settings.vault_name:
@@ -839,24 +851,61 @@ def reindex() -> None:
     console.print(f"[green]Indexing complete:[/green] {chunk_count} chunks indexed.")
 
 
-@app.command()
-def config() -> None:
+@config_app.callback(invoke_without_command=True)
+def config(ctx: typer.Context) -> None:
+    """Inspect and manage Chronicler configuration."""
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(config_show)
+
+
+@config_app.command("show")
+def config_show() -> None:
     """Show current configuration and verify setup."""
     try:
         settings = Settings()
+        field_sources = get_field_sources()
         console.print("[bold]Chronicler Configuration[/bold]")
-        console.print(f"  Vault path:       {settings.vault_path}")
-        console.print(f"  LLM provider:     {settings.llm_provider}")
+        console.print(
+            "  Vault path:       "
+            f"{settings.vault_path}{_format_source_annotation(field_sources, 'vault_path')}"
+        )
+        console.print(
+            "  LLM provider:     "
+            f"{settings.llm_provider}{_format_source_annotation(field_sources, 'llm_provider')}"
+        )
         if settings.llm_provider == "kimi":
-            console.print(f"  Kimi model:       {settings.kimi_model or '(default)'}")
-        else:
-            console.print(f"  nano-gpt model:   {settings.nanogpt_model}")
-            console.print(
-                f"  API key:          {'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}"
+            kimi_model = settings.kimi_model or "(default)"
+            kimi_annotation = (
+                ""
+                if not settings.kimi_model and field_sources["kimi_model"] == "default"
+                else _format_source_annotation(field_sources, "kimi_model")
             )
-        console.print(f"  LM Studio URL:    {settings.lm_studio_base_url}")
-        console.print(f"  Embedding model:  {settings.embedding_model}")
-        console.print(f"  Log level:        {settings.log_level}")
+            console.print(f"  Kimi model:       {kimi_model}{kimi_annotation}")
+        else:
+            console.print(
+                "  nano-gpt model:   "
+                f"{settings.nanogpt_model}"
+                f"{_format_source_annotation(field_sources, 'nanogpt_model')}"
+            )
+            console.print(
+                "  API key:          "
+                f"{'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}"
+                f"{_format_source_annotation(field_sources, 'nanogpt_api_key')}"
+            )
+        console.print(
+            "  LM Studio URL:    "
+            f"{settings.lm_studio_base_url}"
+            f"{_format_source_annotation(field_sources, 'lm_studio_base_url')}"
+        )
+        console.print(
+            "  Embedding model:  "
+            f"{settings.embedding_model}"
+            f"{_format_source_annotation(field_sources, 'embedding_model')}"
+        )
+        console.print(
+            "  Log level:        "
+            f"{settings.log_level}{_format_source_annotation(field_sources, 'log_level')}"
+        )
 
         if not settings.vault_path.exists():
             console.print(
@@ -878,8 +927,8 @@ def config() -> None:
                 console.print(f"[red]Configuration error: {e}[/red]")
         else:
             console.print(f"[red]Configuration error: {e}[/red]")
-        console.print("\nCopy .env.example to .env and fill in your values:")
-        console.print("  cp .env.example .env")
+        console.print("\nRun the config wizard to create your settings file:")
+        console.print("  chronicler config init")
         raise typer.Exit(1)
 
 

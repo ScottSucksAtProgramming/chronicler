@@ -1,7 +1,6 @@
 """Tests for the config init wizard."""
 
 import tomllib
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -97,7 +96,9 @@ class TestConfigInitCommand:
         result = runner.invoke(app, ["config", "init"], input="n\n")
 
         assert result.exit_code == 0
-        assert config_path.read_text(encoding="utf-8") == 'vault_path = "/tmp/original"\n'
+        assert (
+            config_path.read_text(encoding="utf-8") == 'vault_path = "/tmp/original"\n'
+        )
         assert "already exists" in result.output
 
     def test_config_init_aborts_at_summary_without_writing(self, tmp_path):

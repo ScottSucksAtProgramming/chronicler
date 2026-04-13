@@ -127,6 +127,14 @@ def _prompt_optional_value(prompt: str, default: str) -> tuple[str, bool]:
     return value, value != default
 
 
+def _print_vault_name_error() -> None:
+    console.print(
+        "[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]\n"
+        "Run [bold]chronicler config init[/bold] to create or refresh your config file,\n"
+        "or set `vault_name` manually in your TOML config."
+    )
+
+
 def _record_session_metric(
     settings: Settings,
     cli: ObsidianCLI,
@@ -513,11 +521,7 @@ def init() -> None:
         raise typer.Exit(1)
 
     if not settings.vault_name:
-        console.print(
-            "[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]\n"
-            "Set the vault name in your .env file or environment:\n"
-            "  export CHRONICLER_VAULT_NAME='My Campaign Vault'"
-        )
+        _print_vault_name_error()
         raise typer.Exit(1)
 
     cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
@@ -599,11 +603,7 @@ def chat() -> None:
         raise typer.Exit(1)
 
     if not settings.vault_name:
-        console.print(
-            "[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]\n"
-            "Set the vault name in your .env file or environment:\n"
-            "  export CHRONICLER_VAULT_NAME='My Campaign Vault'"
-        )
+        _print_vault_name_error()
         raise typer.Exit(1)
 
     from chronicler.retrieval.embeddings import EmbeddingClient
@@ -845,11 +845,7 @@ def reindex() -> None:
         raise typer.Exit(1)
 
     if not settings.vault_name:
-        console.print(
-            "[red]Error: CHRONICLER_VAULT_NAME is not set.[/red]\n"
-            "Set the vault name in your .env file or environment:\n"
-            "  export CHRONICLER_VAULT_NAME='My Campaign Vault'"
-        )
+        _print_vault_name_error()
         raise typer.Exit(1)
 
     from chronicler.retrieval.embeddings import EmbeddingClient
@@ -1033,7 +1029,9 @@ def config_init() -> None:
     console.print(f"  Vault name:       {vault_name}")
     console.print(f"  LLM provider:     {llm_provider}")
     if llm_provider == "nanogpt":
-        console.print(f"  nano-gpt model:   {config_values.get('nanogpt_model', nanogpt_model)}")
+        console.print(
+            f"  nano-gpt model:   {config_values.get('nanogpt_model', nanogpt_model)}"
+        )
         console.print(
             f"  API key:          {_mask_api_key(str(config_values['nanogpt_api_key']))}"
         )

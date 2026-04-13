@@ -20,17 +20,19 @@ Chronicler targets Python 3.12 and uses `uv` for environment and dependency mana
 uv sync --dev
 ```
 
-4. Copy `.env.example` to `.env` and fill in the values for your machine.
+4. Run `uv run chronicler config init` and follow the prompts for your machine.
 5. Install and configure the local tools your workflow needs:
    - Obsidian desktop with CLI support enabled
    - One LLM provider: Kimi CLI or a nano-gpt.com API key
    - LM Studio with an embedding model loaded if you need `reindex` or `chat`
 
+For unit tests, prefer constructing `Settings(vault_path=...)` directly instead of depending on a real config file.
+
 Useful local commands:
 
 ```bash
 uv run chronicler --help
-uv run chronicler config
+uv run chronicler config show
 uv run pytest
 uv run ruff check src/ tests/
 uv run black --check src/ tests/

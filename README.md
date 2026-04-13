@@ -1,5 +1,7 @@
 # Chronicler
 
+![Chronicler banner](docs/assets/banner.png)
+
 [![CI](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml/badge.svg)](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/chronicler)](https://pypi.org/project/chronicler/)
 

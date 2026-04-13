@@ -7,7 +7,7 @@ import pytest
 from chronicler.vault.obsidian_cli import ObsidianCLI
 from chronicler.vault.vault_manager import VaultManager
 from chronicler.config.settings import Settings
-from chronicler.models.entities import NPC, Location, EntityStatus
+from chronicler.models.entities import NPC, EntityStatus
 
 
 @pytest.mark.integration
@@ -17,7 +17,9 @@ class TestVaultIntegration:
     @pytest.fixture
     def real_cli(self):
         settings = Settings()
-        assert settings.vault_name, "CHRONICLER_VAULT_NAME must be set for integration tests"
+        assert (
+            settings.vault_name
+        ), "CHRONICLER_VAULT_NAME must be set for integration tests"
         return ObsidianCLI(vault_name=settings.vault_name)
 
     @pytest.fixture

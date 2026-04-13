@@ -19,11 +19,24 @@ def mock_collection():
     collection = MagicMock()
     collection.query.return_value = {
         "ids": [["NPCs/Sylvie.md::Description", "Sessions/Session-001.md::Summary"]],
-        "documents": [["A mysterious elf from the forest.", "The party met Sylvie near the ruins."]],
+        "documents": [
+            [
+                "A mysterious elf from the forest.",
+                "The party met Sylvie near the ruins.",
+            ]
+        ],
         "metadatas": [
             [
-                {"path": "NPCs/Sylvie.md", "heading": "Description", "note_type": "npc"},
-                {"path": "Sessions/Session-001.md", "heading": "Summary", "note_type": "session"},
+                {
+                    "path": "NPCs/Sylvie.md",
+                    "heading": "Description",
+                    "note_type": "npc",
+                },
+                {
+                    "path": "Sessions/Session-001.md",
+                    "heading": "Summary",
+                    "note_type": "session",
+                },
             ]
         ],
         "distances": [[0.12, 0.35]],
@@ -48,7 +61,9 @@ class TestSearchResult:
 class TestRetrievalLayer:
     @pytest.mark.asyncio
     async def test_search_returns_results(self, mock_collection, mock_embed_client):
-        layer = RetrievalLayer(collection=mock_collection, embed_client=mock_embed_client)
+        layer = RetrievalLayer(
+            collection=mock_collection, embed_client=mock_embed_client
+        )
         results = await layer.search("Tell me about Sylvie", top_k=5)
 
         assert len(results) == 2
@@ -64,8 +79,12 @@ class TestRetrievalLayer:
         mock_collection.query.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_empty_query_returns_empty(self, mock_collection, mock_embed_client):
-        layer = RetrievalLayer(collection=mock_collection, embed_client=mock_embed_client)
+    async def test_search_empty_query_returns_empty(
+        self, mock_collection, mock_embed_client
+    ):
+        layer = RetrievalLayer(
+            collection=mock_collection, embed_client=mock_embed_client
+        )
         results = await layer.search("", top_k=5)
 
         assert results == []
@@ -73,14 +92,18 @@ class TestRetrievalLayer:
         mock_collection.query.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_search_no_results_returns_empty(self, mock_collection, mock_embed_client):
+    async def test_search_no_results_returns_empty(
+        self, mock_collection, mock_embed_client
+    ):
         mock_collection.query.return_value = {
             "ids": [[]],
             "documents": [[]],
             "metadatas": [[]],
             "distances": [[]],
         }
-        layer = RetrievalLayer(collection=mock_collection, embed_client=mock_embed_client)
+        layer = RetrievalLayer(
+            collection=mock_collection, embed_client=mock_embed_client
+        )
         results = await layer.search("Something obscure", top_k=5)
 
         assert results == []

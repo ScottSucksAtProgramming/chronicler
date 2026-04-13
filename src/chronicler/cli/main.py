@@ -67,9 +67,7 @@ def _load_vault_manager() -> VaultManager:
 
 
 def _confirm_ambiguous_source(file_path: Path) -> SourceClassification:
-    console.print(
-        f"[yellow]Could not confidently classify {file_path.name}.[/yellow]"
-    )
+    console.print(f"[yellow]Could not confidently classify {file_path.name}.[/yellow]")
     selected = typer.prompt(
         "How should this source be treated? "
         "(session_transcript, session_summary, session_support, legacy_note, campaign_background)",
@@ -114,7 +112,9 @@ async def _auto_reindex_vault(settings: Settings, cli: ObsidianCLI) -> int | Non
     from chronicler.retrieval.indexer import VaultIndexer
     import chromadb
 
-    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+    embed_client = EmbeddingClient(
+        settings.lm_studio_base_url, settings.embedding_model
+    )
     if not embed_client.health_check():
         return None
 
@@ -154,11 +154,16 @@ async def _run_ingest_pipeline(
         settings = Settings()
     except Exception as exc:
         from pydantic import ValidationError
+
         if isinstance(exc, ValidationError):
-            missing = [err["loc"][0] for err in exc.errors() if err["type"] == "missing"]
+            missing = [
+                err["loc"][0] for err in exc.errors() if err["type"] == "missing"
+            ]
             if missing:
                 env_vars = [f"CHRONICLER_{name.upper()}" for name in missing]
-                raise _ConfigError(f"missing required setting(s): {', '.join(env_vars)}") from exc
+                raise _ConfigError(
+                    f"missing required setting(s): {', '.join(env_vars)}"
+                ) from exc
         raise _ConfigError(str(exc)) from exc
 
     gateway = LLMGateway(settings)
@@ -265,11 +270,16 @@ async def _run_source_ingest_pipeline(
         settings = Settings()
     except Exception as exc:
         from pydantic import ValidationError
+
         if isinstance(exc, ValidationError):
-            missing = [err["loc"][0] for err in exc.errors() if err["type"] == "missing"]
+            missing = [
+                err["loc"][0] for err in exc.errors() if err["type"] == "missing"
+            ]
             if missing:
                 env_vars = [f"CHRONICLER_{name.upper()}" for name in missing]
-                raise _ConfigError(f"missing required setting(s): {', '.join(env_vars)}") from exc
+                raise _ConfigError(
+                    f"missing required setting(s): {', '.join(env_vars)}"
+                ) from exc
         raise _ConfigError(str(exc)) from exc
 
     gateway = LLMGateway(settings)
@@ -319,11 +329,15 @@ async def _run_source_ingest_pipeline(
 def ingest(
     files: Annotated[
         list[Path],
-        typer.Argument(help="PLAUD PDF summary and/or transcript .txt files to ingest."),
+        typer.Argument(
+            help="PLAUD PDF summary and/or transcript .txt files to ingest."
+        ),
     ],
     session_number: Annotated[
         Optional[int],
-        typer.Option("--session", "-s", help="Session number. Auto-detected if not provided."),
+        typer.Option(
+            "--session", "-s", help="Session number. Auto-detected if not provided."
+        ),
     ] = None,
 ) -> None:
     """Ingest PLAUD session files into the campaign vault."""
@@ -388,7 +402,9 @@ def ingest(
             if source_result.questions:
                 console.print(f"  Questions:    {len(source_result.questions)}")
             if source_result.recap:
-                console.print(f"\n[bold]Anchored Recap — {source_result.recap.title}[/bold]")
+                console.print(
+                    f"\n[bold]Anchored Recap — {source_result.recap.title}[/bold]"
+                )
                 console.print(source_result.recap.summary)
             return
 
@@ -416,8 +432,12 @@ def ingest(
             )
             console.print("Try one of these:")
             console.print("  1. Provide the PDF summary alongside the transcript")
-            console.print("  2. Trim obvious off-topic explicit banter from the transcript")
-            console.print("  3. Retry after confirming the transcript was segmented correctly")
+            console.print(
+                "  2. Trim obvious off-topic explicit banter from the transcript"
+            )
+            console.print(
+                "  3. Retry after confirming the transcript was segmented correctly"
+            )
         else:
             console.print(f"[red]Pipeline error: {message}[/red]")
         raise typer.Exit(1)
@@ -466,10 +486,14 @@ def init() -> None:
         console.print(f"[red]Failed to initialise vault: {exc}[/red]")
         raise typer.Exit(1)
 
-    console.print(f"[bold green]Vault initialised![/bold green]")
+    console.print("[bold green]Vault initialised![/bold green]")
     console.print(f"  Vault name: {settings.vault_name}")
-    console.print("  Created folders: Sessions, NPCs, Locations, Factions, Loot, Plot-Threads, _Agent")
-    console.print("  Created seed files: Dashboard, Timeline, Open/Closed Threads, Agent Memory")
+    console.print(
+        "  Created folders: Sessions, NPCs, Locations, Factions, Loot, Plot-Threads, _Agent"
+    )
+    console.print(
+        "  Created seed files: Dashboard, Timeline, Open/Closed Threads, Agent Memory"
+    )
     console.print("\nYou're ready to run [bold]chronicler ingest[/bold].")
 
 
@@ -541,7 +565,9 @@ def chat() -> None:
 
     from chronicler.retrieval.embeddings import EmbeddingClient
 
-    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+    embed_client = EmbeddingClient(
+        settings.lm_studio_base_url, settings.embedding_model
+    )
     if not embed_client.health_check():
         console.print(
             "[red]Error: Cannot connect to LM Studio at "
@@ -616,7 +642,9 @@ def review() -> None:
             style = "dim"
 
         file_str = f" [{finding.file}]" if finding.file else ""
-        console.print(f"[{style}]{finding.severity.value.upper()}{file_str}: {finding.detail}[/{style}]")
+        console.print(
+            f"[{style}]{finding.severity.value.upper()}{file_str}: {finding.detail}[/{style}]"
+        )
 
     # Summary
     console.print(
@@ -644,7 +672,9 @@ def review() -> None:
         try:
             cli.create("_Agent/Review-Log.md", "# Review Log\n" + "\n".join(log_lines))
         except Exception as exc:
-            console.print(f"[yellow]Warning: Could not write review log: {exc}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Could not write review log: {exc}[/yellow]"
+            )
 
 
 @app.command()
@@ -695,8 +725,7 @@ def ask() -> None:
     # List question files, excluding the answered/ subfolder
     all_questions = cli.find_notes_in_folder("_Agent/Questions/")
     questions = [
-        q for q in all_questions
-        if not q.startswith("_Agent/Questions/answered/")
+        q for q in all_questions if not q.startswith("_Agent/Questions/answered/")
     ]
 
     if not questions:
@@ -784,7 +813,9 @@ def reindex() -> None:
     from chronicler.retrieval.indexer import VaultIndexer
 
     cli = ObsidianCLI(settings.vault_name, vault_path=settings.vault_path)
-    embed_client = EmbeddingClient(settings.lm_studio_base_url, settings.embedding_model)
+    embed_client = EmbeddingClient(
+        settings.lm_studio_base_url, settings.embedding_model
+    )
 
     if not embed_client.health_check():
         console.print(
@@ -820,13 +851,17 @@ def config() -> None:
             console.print(f"  Kimi model:       {settings.kimi_model or '(default)'}")
         else:
             console.print(f"  nano-gpt model:   {settings.nanogpt_model}")
-            console.print(f"  API key:          {'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}")
+            console.print(
+                f"  API key:          {'***' + settings.nanogpt_api_key[-4:] if settings.nanogpt_api_key else '(not set)'}"
+            )
         console.print(f"  LM Studio URL:    {settings.lm_studio_base_url}")
         console.print(f"  Embedding model:  {settings.embedding_model}")
         console.print(f"  Log level:        {settings.log_level}")
 
         if not settings.vault_path.exists():
-            console.print(f"\n[yellow]Warning: Vault path does not exist: {settings.vault_path}[/yellow]")
+            console.print(
+                f"\n[yellow]Warning: Vault path does not exist: {settings.vault_path}[/yellow]"
+            )
         else:
             console.print("\n[green]Vault path exists.[/green]")
     except Exception as e:
@@ -836,7 +871,9 @@ def config() -> None:
             missing = [err["loc"][0] for err in e.errors() if err["type"] == "missing"]
             if missing:
                 env_vars = [f"CHRONICLER_{name.upper()}" for name in missing]
-                console.print(f"[red]Configuration error: missing required setting(s): {', '.join(env_vars)}[/red]")
+                console.print(
+                    f"[red]Configuration error: missing required setting(s): {', '.join(env_vars)}[/red]"
+                )
             else:
                 console.print(f"[red]Configuration error: {e}[/red]")
         else:
@@ -851,7 +888,7 @@ def stats() -> None:
     """Show session quality metrics and extraction trends."""
     try:
         settings = Settings()
-    except Exception as exc:
+    except Exception:
         console.print("[bold]Chronicler Stats[/bold]")
         console.print("No quality metrics yet.")
         return

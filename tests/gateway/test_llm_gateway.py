@@ -1,6 +1,5 @@
 """Tests for the LLM Gateway."""
 
-import json
 from pathlib import Path
 import pytest
 import httpx
@@ -9,7 +8,6 @@ from pydantic import BaseModel
 
 from chronicler.gateway.types import LLMRequest, LLMResponse, LLMUsage
 from chronicler.gateway.llm_gateway import LLMGateway, LLMGatewayError
-from chronicler.config.settings import Settings
 
 
 class SampleOutput(BaseModel):
@@ -90,7 +88,9 @@ class TestLLMGateway:
         with patch.object(gateway, "_client") as mock_client:
             mock_client.post = AsyncMock(side_effect=[fail_response, success_response])
             result = await gateway.complete(
-                LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model")
+                LLMRequest(
+                    messages=[{"role": "user", "content": "test"}], model="test-model"
+                )
             )
             assert result.content == "recovered"
             assert mock_client.post.call_count == 2
@@ -109,7 +109,10 @@ class TestLLMGateway:
             mock_client.post = AsyncMock(return_value=fail_response)
             with pytest.raises(LLMGatewayError, match="failed after"):
                 await gateway.complete(
-                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model")
+                    LLMRequest(
+                        messages=[{"role": "user", "content": "test"}],
+                        model="test-model",
+                    )
                 )
 
     @pytest.mark.asyncio
@@ -128,11 +131,18 @@ class TestLLMGateway:
                 ),
                 stderr="",
             )
-            mock_loop.return_value.run_in_executor = AsyncMock(return_value=mock_executor.return_value)
+            mock_loop.return_value.run_in_executor = AsyncMock(
+                return_value=mock_executor.return_value
+            )
 
-            with pytest.raises(LLMGatewayError, match="rejected the prompt as high-risk content"):
+            with pytest.raises(
+                LLMGatewayError, match="rejected the prompt as high-risk content"
+            ):
                 await gateway.complete(
-                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
+                    LLMRequest(
+                        messages=[{"role": "user", "content": "test"}],
+                        model="kimi-default",
+                    )
                 )
 
     @pytest.mark.asyncio
@@ -150,10 +160,15 @@ class TestLLMGateway:
 
         with patch("subprocess.run", return_value=completed) as mock_run:
             with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_in_executor = AsyncMock(side_effect=run_subprocess)
+                mock_loop.return_value.run_in_executor = AsyncMock(
+                    side_effect=run_subprocess
+                )
 
                 result = await gateway.complete(
-                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
+                    LLMRequest(
+                        messages=[{"role": "user", "content": "test"}],
+                        model="kimi-default",
+                    )
                 )
 
         assert result.content == "test response"
@@ -169,7 +184,9 @@ class TestLLMGateway:
 
         with patch("subprocess.run", return_value=completed) as mock_run:
             result = gateway.complete_sync(
-                LLMRequest(messages=[{"role": "user", "content": "test"}], model="kimi-default")
+                LLMRequest(
+                    messages=[{"role": "user", "content": "test"}], model="kimi-default"
+                )
             )
 
         assert result.content == "test response"
@@ -209,7 +226,9 @@ class TestLLMGateway:
         mock_response.status_code = 200
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
-            "choices": [{"message": {"content": '```json\n{"name": "Alice", "age": 25}\n```'}}],
+            "choices": [
+                {"message": {"content": '```json\n{"name": "Alice", "age": 25}\n```'}}
+            ],
             "model": "test-model",
             "usage": {"prompt_tokens": 10, "completion_tokens": 5},
         }
@@ -217,7 +236,9 @@ class TestLLMGateway:
         with patch.object(gateway, "_client") as mock_client:
             mock_client.post = AsyncMock(return_value=mock_response)
             result = await gateway.complete_structured(
-                LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model"),
+                LLMRequest(
+                    messages=[{"role": "user", "content": "test"}], model="test-model"
+                ),
                 output_type=SampleOutput,
             )
             assert result.name == "Alice"
@@ -238,8 +259,13 @@ class TestLLMGateway:
 
         with patch.object(gateway, "_client") as mock_client:
             mock_client.post = AsyncMock(return_value=bad_response)
-            with pytest.raises(LLMGatewayError, match="parsing failed after correction"):
+            with pytest.raises(
+                LLMGatewayError, match="parsing failed after correction"
+            ):
                 await gateway.complete_structured(
-                    LLMRequest(messages=[{"role": "user", "content": "test"}], model="test-model"),
+                    LLMRequest(
+                        messages=[{"role": "user", "content": "test"}],
+                        model="test-model",
+                    ),
                     output_type=SampleOutput,
                 )

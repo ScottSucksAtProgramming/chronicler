@@ -1,18 +1,24 @@
 """Tests for rendering Pydantic models into Obsidian markdown notes."""
 
-import pytest
 from chronicler.vault.note_renderer import (
     render_npc_note,
     render_location_note,
     render_faction_note,
     render_loot_note,
     render_session_note,
-    render_plot_thread_note,
     render_open_threads,
     render_dashboard,
     wikify,
 )
-from chronicler.models.entities import NPC, Location, Faction, LootItem, PlotThread, EntityStatus, ThreadStatus
+from chronicler.models.entities import (
+    NPC,
+    Location,
+    Faction,
+    LootItem,
+    PlotThread,
+    EntityStatus,
+    ThreadStatus,
+)
 from chronicler.models.session import SessionRecap, KeyEvent
 
 
@@ -252,14 +258,19 @@ class TestRenderSession:
             title="No Loose Ends",
             summary="Theron led the party to The Black Spire and the Bronze Compass.",
             key_events=[
-                KeyEvent(description="Theron warned the party about The Black Spire.", timestamp="00:17:15"),
+                KeyEvent(
+                    description="Theron warned the party about The Black Spire.",
+                    timestamp="00:17:15",
+                ),
             ],
         )
         npcs = [NPC(name="Theron", first_appeared="Session-022")]
         locations = [Location(name="The Black Spire", first_appeared="Session-022")]
         loot = [LootItem(name="Bronze Compass", found_in="Session-022")]
 
-        md = render_session_note(recap, npcs, locations, factions=[], loot=loot, player_characters=[])
+        md = render_session_note(
+            recap, npcs, locations, factions=[], loot=loot, player_characters=[]
+        )
 
         assert "[[Theron]] led the party" in md
         assert "[[The Black Spire]]" in md
@@ -276,7 +287,9 @@ class TestRenderSession:
         npcs = [NPC(name="Theron", first_appeared="Session-022")]
         locations = [Location(name="The Black Spire", first_appeared="Session-022")]
 
-        md = render_session_note(recap, npcs, locations, factions=[], loot=[], player_characters=[])
+        md = render_session_note(
+            recap, npcs, locations, factions=[], loot=[], player_characters=[]
+        )
 
         assert 'npcs: ["[[Theron]]"]' in md
         assert 'locations: ["[[The Black Spire]]"]' in md
@@ -290,16 +303,26 @@ class TestRenderSession:
         )
 
         md = render_session_note(recap, [], [])
-        assert 'title: "Session 3: The Sloop Dogg, Sea Horrors, and The Spying Card"' in md
+        assert (
+            'title: "Session 3: The Sloop Dogg, Sea Horrors, and The Spying Card"' in md
+        )
 
 
 class TestRenderOpenThreads:
     def test_render_open_threads(self):
         threads = [
-            PlotThread(title="The Black Spire", status=ThreadStatus.OPEN,
-                       introduced_in="Session-022", summary="Cult site in swamp."),
-            PlotThread(title="Missing Merchant", status=ThreadStatus.OPEN,
-                       introduced_in="Session-020", summary="Still missing."),
+            PlotThread(
+                title="The Black Spire",
+                status=ThreadStatus.OPEN,
+                introduced_in="Session-022",
+                summary="Cult site in swamp.",
+            ),
+            PlotThread(
+                title="Missing Merchant",
+                status=ThreadStatus.OPEN,
+                introduced_in="Session-020",
+                summary="Still missing.",
+            ),
         ]
         md = render_open_threads(threads)
         assert "The Black Spire" in md

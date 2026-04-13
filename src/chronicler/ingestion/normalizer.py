@@ -43,7 +43,11 @@ async def normalize_session(
     in_game = sum(1 for s in filtered_segments if s.is_in_game)
     logger.info(
         "Normalized session %d: title=%r, summary=%d chars, segments=%d (%d in-game)",
-        session_number, title, len(summary_text) if summary_text else 0, len(filtered_segments), in_game,
+        session_number,
+        title,
+        len(summary_text) if summary_text else 0,
+        len(filtered_segments),
+        in_game,
     )
 
     return result

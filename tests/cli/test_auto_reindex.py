@@ -1,4 +1,5 @@
 """Tests for auto-reindex after ingest."""
+
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -6,7 +7,9 @@ from chronicler.cli.main import _auto_reindex_vault
 
 
 class TestAutoReindex:
-    def test_auto_reindex_runs_indexer_when_embeddings_are_available(self, tmp_path) -> None:
+    def test_auto_reindex_runs_indexer_when_embeddings_are_available(
+        self, tmp_path
+    ) -> None:
         settings = SimpleNamespace(
             lm_studio_base_url="http://localhost:1234/v1",
             embedding_model="text-embedding-test",
@@ -25,9 +28,14 @@ class TestAutoReindex:
         fake_indexer.index_vault = AsyncMock(return_value=42)
 
         with (
-            patch("chronicler.retrieval.embeddings.EmbeddingClient", return_value=fake_embed_client),
+            patch(
+                "chronicler.retrieval.embeddings.EmbeddingClient",
+                return_value=fake_embed_client,
+            ),
             patch("chromadb.PersistentClient", return_value=fake_chroma_client),
-            patch("chronicler.retrieval.indexer.VaultIndexer", return_value=fake_indexer),
+            patch(
+                "chronicler.retrieval.indexer.VaultIndexer", return_value=fake_indexer
+            ),
         ):
             import asyncio
 

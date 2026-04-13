@@ -17,14 +17,21 @@ def _slugify(value: str) -> str:
 def archive_source_document(vault_path: Path, document: SourceDocument) -> Path:
     """Copy an imported source and metadata into ``_Agent/Sources/``."""
     timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d-%H%M%S")
-    archive_dir = vault_path / "_Agent" / "Sources" / f"{timestamp}-{_slugify(document.original_filename)}"
+    archive_dir = (
+        vault_path
+        / "_Agent"
+        / "Sources"
+        / f"{timestamp}-{_slugify(document.original_filename)}"
+    )
     archive_dir.mkdir(parents=True, exist_ok=True)
 
     original_target = archive_dir / document.original_filename
     original_target.write_bytes(document.source_path.read_bytes())
 
     if document.extracted_text:
-        (archive_dir / "extracted.txt").write_text(document.extracted_text, encoding="utf-8")
+        (archive_dir / "extracted.txt").write_text(
+            document.extracted_text, encoding="utf-8"
+        )
 
     classification_type = (
         document.classification.document_type.value
@@ -38,7 +45,8 @@ def archive_source_document(vault_path: Path, document: SourceDocument) -> Path:
     )
     session_anchor = (
         str(document.classification.session_anchor)
-        if document.classification and document.classification.session_anchor is not None
+        if document.classification
+        and document.classification.session_anchor is not None
         else ""
     )
     source_attribution = document.source_attribution or ""

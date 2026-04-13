@@ -1,6 +1,5 @@
 """Tests for context bundle and agent memory models."""
 
-import pytest
 from chronicler.models.context import (
     AgentMemory,
     ContextBundle,
@@ -33,7 +32,9 @@ class TestContextBundle:
             session_number=23,
             known_npcs=[
                 EntitySummary(name="Sylvie", aliases=[], status="alive"),
-                EntitySummary(name="The Friendly Face", aliases=["big guy"], status="dead"),
+                EntitySummary(
+                    name="The Friendly Face", aliases=["big guy"], status="dead"
+                ),
             ],
             known_locations=[
                 EntitySummary(name="The Black Spire", aliases=["the spire"]),
@@ -42,12 +43,23 @@ class TestContextBundle:
                 EntitySummary(name="Sylvie's Cult", aliases=["the cult"]),
             ],
             active_threads=[
-                ThreadSummary(title="Smuggling Operation", summary="Cult is smuggling chemicals."),
+                ThreadSummary(
+                    title="Smuggling Operation", summary="Cult is smuggling chemicals."
+                ),
             ],
-            recent_events=["Session 22: Party interrogated the friendly face informant."],
-            entity_aliases={"the tavern": "Smoked Eel Tavern", "the boat": "The Mayweather"},
+            recent_events=[
+                "Session 22: Party interrogated the friendly face informant."
+            ],
+            entity_aliases={
+                "the tavern": "Smoked Eel Tavern",
+                "the boat": "The Mayweather",
+            },
             player_characters=[
-                PlayerCharacter(player_name="Scott", character_name="Seven", character_class="Wizard"),
+                PlayerCharacter(
+                    player_name="Scott",
+                    character_name="Seven",
+                    character_class="Wizard",
+                ),
             ],
         )
         assert len(bundle.known_npcs) == 2
@@ -84,10 +96,19 @@ class TestAgentMemory:
 
     def test_create_populated_memory(self):
         memory = AgentMemory(
-            extraction_rules=["NPCs are usually introduced by the DM with a name and description."],
-            entity_aliases={"the tavern": "Smoked Eel Tavern", "the boat": "The Mayweather"},
+            extraction_rules=[
+                "NPCs are usually introduced by the DM with a name and description."
+            ],
+            entity_aliases={
+                "the tavern": "Smoked Eel Tavern",
+                "the boat": "The Mayweather",
+            },
             player_characters=[
-                PlayerCharacter(player_name="Scott", character_name="Seven", character_class="Wizard"),
+                PlayerCharacter(
+                    player_name="Scott",
+                    character_name="Seven",
+                    character_class="Wizard",
+                ),
             ],
             campaign_patterns=["DM uses 'friendly face' as a recurring alias pattern."],
             user_preferences=["Prefer concise session recaps over detailed ones."],

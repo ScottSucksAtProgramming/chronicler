@@ -3,7 +3,7 @@
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def _extract_frontmatter_type(content: str) -> tuple[str, str]:
         return "", content
 
     frontmatter_block = match.group(1)
-    rest = content[match.end():]
+    rest = content[match.end() :]
 
     type_match = re.search(r"^type:\s*(.+)$", frontmatter_block, re.MULTILINE)
     note_type = type_match.group(1).strip() if type_match else ""
@@ -73,7 +73,9 @@ class VaultIndexer:
             # No ## headings — whole body is a single chunk
             text = parts[0].strip()
             if text:
-                chunks.append(NoteChunk(path=path, heading="", content=text, note_type=note_type))
+                chunks.append(
+                    NoteChunk(path=path, heading="", content=text, note_type=note_type)
+                )
             else:
                 # Completely empty note — still return one chunk so callers
                 # don't have to handle zero-chunk notes for non-empty files.
@@ -84,7 +86,9 @@ class VaultIndexer:
         # preamble (text before first ## heading)
         preamble = parts[0].strip()
         if preamble:
-            chunks.append(NoteChunk(path=path, heading="", content=preamble, note_type=note_type))
+            chunks.append(
+                NoteChunk(path=path, heading="", content=preamble, note_type=note_type)
+            )
 
         # paired (heading, section) tuples
         for i in range(1, len(parts), 2):

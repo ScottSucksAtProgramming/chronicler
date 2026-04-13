@@ -96,14 +96,17 @@ async def _evaluate_quality(
 ) -> QualityScore | None:
     """Call the LLM to evaluate extraction quality. Returns None on any failure."""
     try:
-        extraction_json = json.dumps({
-            "npcs": [n.model_dump() for n in entities.npcs],
-            "locations": [l.model_dump() for l in entities.locations],
-            "factions": [f.model_dump() for f in entities.factions],
-            "loot": [li.model_dump() for li in entities.loot],
-            "plot_threads": [pt.model_dump() for pt in entities.plot_threads],
-            "recap": recap.model_dump(),
-        }, default=str)
+        extraction_json = json.dumps(
+            {
+                "npcs": [n.model_dump() for n in entities.npcs],
+                "locations": [location.model_dump() for location in entities.locations],
+                "factions": [f.model_dump() for f in entities.factions],
+                "loot": [li.model_dump() for li in entities.loot],
+                "plot_threads": [pt.model_dump() for pt in entities.plot_threads],
+                "recap": recap.model_dump(),
+            },
+            default=str,
+        )
 
         prompt = build_quality_judge_prompt(source, extraction_json)
         request = LLMRequest(
@@ -142,7 +145,9 @@ async def extract_session(
     recap = await _generate_recap(source_text, session.session_number, gateway, model)
 
     # Step 3: Evaluate quality
-    quality_score = await _evaluate_quality(source_text, entities, recap, gateway, model)
+    quality_score = await _evaluate_quality(
+        source_text, entities, recap, gateway, model
+    )
 
     return ExtractionResult(
         session_number=session.session_number,

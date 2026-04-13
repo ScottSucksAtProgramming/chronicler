@@ -1,11 +1,8 @@
 """Tests for raw transcript parser."""
 
-import pytest
 from chronicler.ingestion.transcript_parser import (
     parse_transcript,
-    TimestampedSegment,
 )
-
 
 SAMPLE_TRANSCRIPT = """00:00:00
 Captain, and then you haven't gone back to see her because it is yeah.

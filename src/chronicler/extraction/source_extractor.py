@@ -12,7 +12,11 @@ from chronicler.gateway.llm_gateway import LLMGateway
 from chronicler.gateway.types import LLMRequest
 from chronicler.models.context import ContextBundle
 from chronicler.models.entities import Faction, Location, LootItem, NPC, PlotThread
-from chronicler.models.extraction import AgentQuestion, KnowledgeIngestResult, QuestionPriority
+from chronicler.models.extraction import (
+    AgentQuestion,
+    KnowledgeIngestResult,
+    QuestionPriority,
+)
 from chronicler.models.source_document import SourceDocument
 from chronicler.models.session import SessionRecap
 from pydantic import BaseModel, Field
@@ -32,13 +36,17 @@ def _infer_source_attribution(document: SourceDocument) -> str | None:
     if document.source_attribution:
         return document.source_attribution
 
-    lines = [line.strip() for line in (document.extracted_text or "").splitlines()[:5] if line.strip()]
+    lines = [
+        line.strip()
+        for line in (document.extracted_text or "").splitlines()[:5]
+        if line.strip()
+    ]
     for line in lines:
         lowered = line.lower()
         for prefix in ("source:", "author:", "from ", "by "):
             if not lowered.startswith(prefix):
                 continue
-            snippet = line[len(prefix):].strip(" .:-")
+            snippet = line[len(prefix) :].strip(" .:-")
             if snippet:
                 return snippet
     return None
@@ -142,7 +150,9 @@ async def extract_source_document(
         summary="Knowledge-first source ingest without session recap.",
         key_events=[],
     )
-    quality_score = await _evaluate_quality(source_text, entities, quality_recap, gateway, model)
+    quality_score = await _evaluate_quality(
+        source_text, entities, quality_recap, gateway, model
+    )
 
     questions = list(entities.questions)
     if session_anchor is None and source_attribution is None:

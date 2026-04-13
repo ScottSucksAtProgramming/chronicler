@@ -25,8 +25,7 @@ def classify_source_document(
         )
 
     if document.media_type == "application/pdf" and (
-        "summary" in filename
-        or ("session" in extracted and "summary" in extracted)
+        "summary" in filename or ("session" in extracted and "summary" in extracted)
     ):
         return SourceClassification(
             document_type=DocumentType.SESSION_SUMMARY,

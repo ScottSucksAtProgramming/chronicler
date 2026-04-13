@@ -11,15 +11,14 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-
 DEFAULT_BINARY = "/Applications/Obsidian.app/Contents/MacOS/obsidian"
 
 # Stdout/stderr lines that are noise — not real errors or data.
 # The Obsidian CLI outputs loading messages and update warnings to STDOUT.
 _STDERR_NOISE = (
-    "Loading",        # "Loading updated app package..."
-    "out of date",    # "Your Obsidian installer is out of date..."
-    "download",       # "Please download the latest installer..."
+    "Loading",  # "Loading updated app package..."
+    "out of date",  # "Your Obsidian installer is out of date..."
+    "download",  # "Please download the latest installer..."
 )
 
 
@@ -74,23 +73,29 @@ class ObsidianCLI:
         except subprocess.TimeoutExpired as exc:
             raise ObsidianCLIError(f"CLI timed out after {timeout}s: {cmd}") from exc
         except FileNotFoundError as exc:
-            raise ObsidianCLIError(f"Obsidian binary not found: {self.binary_path}") from exc
+            raise ObsidianCLIError(
+                f"Obsidian binary not found: {self.binary_path}"
+            ) from exc
 
         # Filter known noise from stderr before deciding whether to raise.
         stderr_lines = [
-            line for line in result.stderr.splitlines()
+            line
+            for line in result.stderr.splitlines()
             if line.strip() and not any(noise in line for noise in _STDERR_NOISE)
         ]
         real_stderr = "\n".join(stderr_lines)
 
         if result.returncode != 0:
-            detail = real_stderr or result.stdout.strip() or f"exit code {result.returncode}"
+            detail = (
+                real_stderr or result.stdout.strip() or f"exit code {result.returncode}"
+            )
             raise ObsidianCLIError(f"CLI error: {detail}")
 
         # Filter noise from stdout too — Obsidian CLI outputs loading messages
         # and update warnings to stdout, not just stderr.
         stdout_lines = [
-            line for line in result.stdout.splitlines()
+            line
+            for line in result.stdout.splitlines()
             if line.strip() and not any(noise in line for noise in _STDERR_NOISE)
         ]
         return "\n".join(stdout_lines).strip()
@@ -188,9 +193,7 @@ class ObsidianCLI:
         Returns:
             List of relative note paths that match the query.
         """
-        raw = self._run(
-            f'search query="{query}" vault="{self.vault_name}" format=json'
-        )
+        raw = self._run(f'search query="{query}" vault="{self.vault_name}" format=json')
         if not raw:
             return []
         try:
@@ -227,8 +230,7 @@ class ObsidianCLI:
             if not base.exists():
                 return []
             return sorted(
-                str(md_file.relative_to(root))
-                for md_file in base.rglob("*.md")
+                str(md_file.relative_to(root)) for md_file in base.rglob("*.md")
             )
 
         if folder:

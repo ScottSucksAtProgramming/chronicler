@@ -127,7 +127,9 @@ def check_missing_fields(snapshot: VaultSnapshot) -> list[ReviewFinding]:
 # ---------------------------------------------------------------------------
 
 
-def check_duplicate_entities(snapshot: VaultSnapshot, folder: str) -> list[ReviewFinding]:
+def check_duplicate_entities(
+    snapshot: VaultSnapshot, folder: str
+) -> list[ReviewFinding]:
     """Fuzzy-match filenames within *folder* to surface near-duplicates."""
     notes = list(_notes_in_folder(snapshot, folder).keys())
     stems = [_stem(p) for p in notes]

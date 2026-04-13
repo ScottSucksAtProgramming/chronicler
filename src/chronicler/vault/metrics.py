@@ -66,7 +66,8 @@ class QualityMetrics:
 
         return {
             "sessions_processed": len(self._data),
-            "avg_quality": sum(metric.quality_score for metric in self._data) / len(self._data),
+            "avg_quality": sum(metric.quality_score for metric in self._data)
+            / len(self._data),
             "total_npcs": sum(metric.npc_count for metric in self._data),
             "total_locations": sum(metric.location_count for metric in self._data),
             "findings_trend": trend,

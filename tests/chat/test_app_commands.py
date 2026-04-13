@@ -19,7 +19,9 @@ class TestChatCommands:
 
         bundle = ChatContextBundle(
             core_notes=[DirectVaultNote(path="Party/Seven.md", content="Seven")],
-            supporting_notes=[DirectVaultNote(path="Sessions/Session-002.md", content="Session 2")],
+            supporting_notes=[
+                DirectVaultNote(path="Sessions/Session-002.md", content="Session 2")
+            ],
             retrieval_hits=[
                 SearchResult(
                     path="Locations/Small Merchant Vessel.md",

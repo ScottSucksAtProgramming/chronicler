@@ -1,6 +1,5 @@
 """Tests for the review orchestrator."""
 
-import pytest
 from unittest.mock import MagicMock
 
 from chronicler.reviewer.reviewer import review_vault, ReviewReport
@@ -30,9 +29,15 @@ class TestReviewVault:
 
     def test_report_summary_counts(self):
         findings = [
-            ReviewFinding(check="test", severity=Severity.WARNING, file="a.md", detail="warn"),
-            ReviewFinding(check="test", severity=Severity.ERROR, file="b.md", detail="err"),
-            ReviewFinding(check="test", severity=Severity.INFO, file="c.md", detail="info"),
+            ReviewFinding(
+                check="test", severity=Severity.WARNING, file="a.md", detail="warn"
+            ),
+            ReviewFinding(
+                check="test", severity=Severity.ERROR, file="b.md", detail="err"
+            ),
+            ReviewFinding(
+                check="test", severity=Severity.INFO, file="c.md", detail="info"
+            ),
         ]
         report = ReviewReport(findings=findings)
 

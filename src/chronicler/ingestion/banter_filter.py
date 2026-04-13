@@ -88,10 +88,7 @@ async def _classify_batch(
     Returns TranscriptSegments with classifications applied. On any parse
     failure, all segments in the batch default to is_in_game=True.
     """
-    segment_data = [
-        {"index": i, "text": seg.text}
-        for i, seg in enumerate(batch)
-    ]
+    segment_data = [{"index": i, "text": seg.text} for i, seg in enumerate(batch)]
 
     prompt_content = (
         f"{BANTER_FILTER_PROMPT}\n\n"
@@ -109,8 +106,7 @@ async def _classify_batch(
         raw = LLMGateway._strip_code_fences(response.content)
         data = json.loads(raw)
         classifications = {
-            item["index"]: item["is_in_game"]
-            for item in data["classifications"]
+            item["index"]: item["is_in_game"] for item in data["classifications"]
         }
         logger.info(
             "Banter filter batch (offset=%d, size=%d): %d in-game, %d out-of-game — tokens=%d",

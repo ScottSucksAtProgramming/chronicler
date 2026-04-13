@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from chronicler.ingestion.source_classifier import classify_source_document, is_ambiguous
+from chronicler.ingestion.source_classifier import (
+    classify_source_document,
+    is_ambiguous,
+)
 from chronicler.models import DocumentType, SourceDocument
 
 
@@ -67,7 +70,9 @@ class TestClassifySourceDocument:
         assert classification.confidence < 0.6
         assert is_ambiguous(classification)
 
-    def test_classifier_anchors_legacy_note_without_retyping_it_as_session_support(self) -> None:
+    def test_classifier_anchors_legacy_note_without_retyping_it_as_session_support(
+        self,
+    ) -> None:
         document = SourceDocument(
             source_path=Path("notes/background.md"),
             original_filename="background.md",

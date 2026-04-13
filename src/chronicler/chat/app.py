@@ -110,7 +110,7 @@ class ChatApp(App):
 
         if command == "/help":
             self._add_message(
-                "Available commands: /help, /alias \"alias\" \"entity\", /quit",
+                'Available commands: /help, /alias "alias" "entity", /quit',
                 "assistant-msg",
             )
             return
@@ -177,11 +177,19 @@ class ChatApp(App):
             )
 
             results: list[SearchResult] = self.retrieval.search_sync(query)
-            context_bundle = load_chat_context(
-                cli=self.vault_manager.cli if self.vault_manager is not None else None,
-                query=query,
-                retrieval_results=results,
-            ) if self.vault_manager is not None else None
+            context_bundle = (
+                load_chat_context(
+                    cli=(
+                        self.vault_manager.cli
+                        if self.vault_manager is not None
+                        else None
+                    ),
+                    query=query,
+                    retrieval_results=results,
+                )
+                if self.vault_manager is not None
+                else None
+            )
 
             # Update status
             self.app.call_from_thread(self._update_status, status, "Thinking...")

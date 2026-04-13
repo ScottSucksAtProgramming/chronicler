@@ -5,7 +5,7 @@ from chronicler.extraction.prompts import (
     build_recap_prompt,
     build_quality_judge_prompt,
 )
-from chronicler.models.context import ContextBundle, EntitySummary
+from chronicler.models.context import ContextBundle
 
 
 class TestPromptTemplates:
@@ -41,10 +41,15 @@ class TestPromptTemplates:
 
     def test_extraction_prompt_includes_player_characters_warning(self):
         from chronicler.models.context import PlayerCharacter
+
         context = ContextBundle(
             session_number=5,
             player_characters=[
-                PlayerCharacter(player_name="Scott", character_name="Seven", character_class="Wizard"),
+                PlayerCharacter(
+                    player_name="Scott",
+                    character_name="Seven",
+                    character_class="Wizard",
+                ),
             ],
         )
         prompt = build_extraction_prompt(

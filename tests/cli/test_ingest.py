@@ -1,10 +1,8 @@
 """Tests for the ingest CLI command."""
 
 import asyncio
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from chronicler.cli import main as cli_main
@@ -56,7 +54,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline),
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -92,7 +92,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline),
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline", side_effect=fake_pipeline
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -113,7 +115,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main.Settings", side_effect=Exception("Missing API key")),
+            patch(
+                "chronicler.cli.main.Settings", side_effect=Exception("Missing API key")
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -137,7 +141,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline),
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -162,7 +168,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline),
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline", side_effect=failing_pipeline
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -200,7 +208,10 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", side_effect=capturing_pipeline),
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline",
+                side_effect=capturing_pipeline,
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -220,16 +231,21 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main.typer.prompt", return_value="legacy_note") as mock_prompt,
-            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=MagicMock(
-                npcs=[],
-                locations=[],
-                factions=[],
-                loot=[],
-                plot_threads=[],
-                questions=[],
-                recap=None,
-            )),
+            patch(
+                "chronicler.cli.main.typer.prompt", return_value="legacy_note"
+            ) as mock_prompt,
+            patch(
+                "chronicler.cli.main._run_source_ingest_pipeline",
+                return_value=MagicMock(
+                    npcs=[],
+                    locations=[],
+                    factions=[],
+                    loot=[],
+                    plot_threads=[],
+                    questions=[],
+                    recap=None,
+                ),
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -246,20 +262,25 @@ class TestIngestCommand:
 
     def test_ingest_passes_session_override_to_classifier(self, tmp_path):
         note_file = tmp_path / "notes.md"
-        note_file.write_text("The marsh chapel is older than the village.", encoding="utf-8")
+        note_file.write_text(
+            "The marsh chapel is older than the village.", encoding="utf-8"
+        )
 
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=MagicMock(
-                npcs=[],
-                locations=[],
-                factions=[],
-                loot=[],
-                plot_threads=[],
-                questions=[],
-                recap=None,
-            )),
+            patch(
+                "chronicler.cli.main._run_source_ingest_pipeline",
+                return_value=MagicMock(
+                    npcs=[],
+                    locations=[],
+                    factions=[],
+                    loot=[],
+                    plot_threads=[],
+                    questions=[],
+                    recap=None,
+                ),
+            ),
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -275,7 +296,9 @@ class TestIngestCommand:
 
     def test_ingest_routes_background_note_to_source_pipeline(self, tmp_path):
         note_file = tmp_path / "notes.md"
-        note_file.write_text("The marsh chapel hides the shrine entrance.", encoding="utf-8")
+        note_file.write_text(
+            "The marsh chapel hides the shrine entrance.", encoding="utf-8"
+        )
 
         mock_result = MagicMock()
         mock_result.npcs = [MagicMock()]
@@ -289,7 +312,10 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=mock_result) as mock_pipeline,
+            patch(
+                "chronicler.cli.main._run_source_ingest_pipeline",
+                return_value=mock_result,
+            ) as mock_pipeline,
         ):
             mock_parse.return_value = MagicMock()
             mock_classify.return_value = MagicMock(
@@ -306,7 +332,9 @@ class TestIngestCommand:
 
     def test_ingest_routes_anchored_markdown_note_to_source_pipeline(self, tmp_path):
         note_file = tmp_path / "session-notes.md"
-        note_file.write_text("The marsh chapel hides the shrine entrance.", encoding="utf-8")
+        note_file.write_text(
+            "The marsh chapel hides the shrine entrance.", encoding="utf-8"
+        )
 
         mock_result = MagicMock()
         mock_result.npcs = []
@@ -320,7 +348,10 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=mock_result) as mock_source,
+            patch(
+                "chronicler.cli.main._run_source_ingest_pipeline",
+                return_value=mock_result,
+            ) as mock_source,
             patch("chronicler.cli.main._run_ingest_pipeline") as mock_session,
         ):
             mock_parse.return_value = MagicMock()
@@ -338,7 +369,9 @@ class TestIngestCommand:
 
     def test_ingest_routes_txt_legacy_note_to_source_pipeline(self, tmp_path):
         note_file = tmp_path / "notes.txt"
-        note_file.write_text("Background lore from DM Jared about the marsh chapel.", encoding="utf-8")
+        note_file.write_text(
+            "Background lore from DM Jared about the marsh chapel.", encoding="utf-8"
+        )
 
         mock_result = MagicMock()
         mock_result.npcs = []
@@ -352,7 +385,10 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_source_ingest_pipeline", return_value=mock_result) as mock_source,
+            patch(
+                "chronicler.cli.main._run_source_ingest_pipeline",
+                return_value=mock_result,
+            ) as mock_source,
             patch("chronicler.cli.main._run_ingest_pipeline") as mock_session,
         ):
             mock_parse.return_value = MagicMock()
@@ -386,7 +422,9 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.parse_source_document") as mock_parse,
             patch("chronicler.cli.main.classify_source_document") as mock_classify,
-            patch("chronicler.cli.main._run_ingest_pipeline", return_value=mock_result) as mock_session,
+            patch(
+                "chronicler.cli.main._run_ingest_pipeline", return_value=mock_result
+            ) as mock_session,
             patch("chronicler.cli.main._run_source_ingest_pipeline") as mock_source,
         ):
             mock_parse.return_value = MagicMock()
@@ -404,7 +442,9 @@ class TestIngestCommand:
 
     def test_source_pipeline_archives_and_writes_to_vault(self, tmp_path):
         note_file = tmp_path / "notes.md"
-        note_file.write_text("The marsh chapel hides the shrine entrance.", encoding="utf-8")
+        note_file.write_text(
+            "The marsh chapel hides the shrine entrance.", encoding="utf-8"
+        )
 
         settings = MagicMock()
         settings.vault_name = "Test Vault"
@@ -423,9 +463,18 @@ class TestIngestCommand:
         with (
             patch("chronicler.cli.main.Settings", return_value=settings),
             patch("chronicler.cli.main.LLMGateway") as mock_gateway_cls,
-            patch("chronicler.cli.main.parse_source_document", return_value=parsed_document),
-            patch("chronicler.cli.main.classify_source_document", return_value=classified_document.classification),
-            patch("chronicler.cli.main.extract_source_document", AsyncMock(return_value=extracted_result)),
+            patch(
+                "chronicler.cli.main.parse_source_document",
+                return_value=parsed_document,
+            ),
+            patch(
+                "chronicler.cli.main.classify_source_document",
+                return_value=classified_document.classification,
+            ),
+            patch(
+                "chronicler.cli.main.extract_source_document",
+                AsyncMock(return_value=extracted_result),
+            ),
             patch("chronicler.cli.main.archive_source_document") as mock_archive,
             patch("chronicler.cli.main.ObsidianCLI") as mock_obsidian_cls,
             patch("chronicler.cli.main.VaultManager") as mock_vm_cls,
@@ -440,7 +489,9 @@ class TestIngestCommand:
             mock_vm.get_context_bundle.return_value = MagicMock()
             mock_vm_cls.return_value = mock_vm
 
-            result = asyncio.run(cli_main._run_source_ingest_pipeline([note_file], None))
+            result = asyncio.run(
+                cli_main._run_source_ingest_pipeline([note_file], None)
+            )
 
         assert result is extracted_result
         mock_archive.assert_called_once_with(settings.vault_path, parsed_document)

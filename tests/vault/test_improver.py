@@ -119,7 +119,9 @@ class TestImproveVault:
         assert "### Imported source:" not in updated
         assert "A labyrinthine city of canals." in updated
 
-    def test_improve_cleans_malformed_source_update_labels_and_keeps_single_description_heading(self):
+    def test_improve_cleans_malformed_source_update_labels_and_keeps_single_description_heading(
+        self,
+    ):
         snapshot = {
             "Locations/Anchor Bridge.md": (
                 "---\n"
@@ -250,8 +252,7 @@ class TestImproveVault:
             if call.args[0] == "Sessions/Session-002.md"
         )
         assert (
-            session_rewrite
-            == "---\n"
+            session_rewrite == "---\n"
             "type: session\n"
             'title: "Session 2"\n'
             "---\n"
@@ -280,11 +281,7 @@ class TestImproveVault:
                 "# The Guild\n"
             ),
             "Sessions/Session-001.md": (
-                "---\n"
-                "type: session\n"
-                "title: Intro\n"
-                "---\n"
-                "# Intro\n"
+                "---\n" "type: session\n" "title: Intro\n" "---\n" "# Intro\n"
             ),
         }
         cli = _build_cli(snapshot)
@@ -293,8 +290,12 @@ class TestImproveVault:
 
         assert report.changed_count >= 2
         rewritten_notes = [call.args[1] for call in cli.create.call_args_list]
-        assert any('first_appeared: "[[Session-001]]"' in note for note in rewritten_notes)
-        assert any('affiliations: ["[[The Guild]]"]' in note for note in rewritten_notes)
+        assert any(
+            'first_appeared: "[[Session-001]]"' in note for note in rewritten_notes
+        )
+        assert any(
+            'affiliations: ["[[The Guild]]"]' in note for note in rewritten_notes
+        )
 
     def test_improve_creates_question_for_ambiguous_alias(self):
         snapshot = {
@@ -448,7 +449,10 @@ class TestImproveVault:
             for call in cli.create.call_args_list
             if call.args[0] == "Sessions/Session-002.md"
         ][-1]
-        assert "[[Small Merchant Vessel|The Black Cherry]] carried the party to shore." in rewritten
+        assert (
+            "[[Small Merchant Vessel|The Black Cherry]] carried the party to shore."
+            in rewritten
+        )
 
     def test_improve_normalizes_duplicated_session_heading(self):
         snapshot = {
@@ -521,7 +525,10 @@ class TestImproveVault:
             for call in cli.create.call_args_list
             if call.args[0] == "Party/Celestine Silverleaf.md"
         ][-1]
-        assert "- [[Session-003]]: [[Celestine Silverleaf|Celestine]] paralyzed the Oracle with Hold Person." in updated_party
+        assert (
+            "- [[Session-003]]: [[Celestine Silverleaf|Celestine]] paralyzed the Oracle with Hold Person."
+            in updated_party
+        )
 
     def test_improve_uses_party_alias_field_for_body_linking(self):
         snapshot = {
@@ -554,7 +561,10 @@ class TestImproveVault:
             for call in cli.create.call_args_list
             if call.args[0] == "Sessions/Session-003.md"
         )
-        assert "[[Celestine Silverleaf|Celestine]] paralyzed the Oracle with Hold Person." in updated_session
+        assert (
+            "[[Celestine Silverleaf|Celestine]] paralyzed the Oracle with Hold Person."
+            in updated_session
+        )
 
     def test_improve_avoids_partial_links_inside_longer_party_names(self):
         snapshot = {
@@ -597,9 +607,14 @@ class TestImproveVault:
             for call in cli.create.call_args_list
             if call.args[0] == "Sessions/Session-003.md"
         ][-1]
-        assert "[[Severian 'Seven' Emberwatch|Severian Emberwatch]] spoke with" in updated_session
+        assert (
+            "[[Severian 'Seven' Emberwatch|Severian Emberwatch]] spoke with"
+            in updated_session
+        )
         assert "Anthony '[[Antoni" not in updated_session
-        assert "[[Severian 'Seven' Emberwatch|Severian]] Emberwatch" not in updated_session
+        assert (
+            "[[Severian 'Seven' Emberwatch|Severian]] Emberwatch" not in updated_session
+        )
 
     def test_improve_does_not_self_link_or_duplicate_alias_lines_in_party_notes(self):
         snapshot = {
@@ -741,9 +756,19 @@ class TestImproveVault:
             if call.args[0] == "Sessions/Session-003.md"
         ][-1]
         assert "[[Severian “Seven” Emberwatch|Seven]]" not in updated_session
-        assert "Anthony '[[Antoni 'Boney Toney' Deleoro|Boney Toney]]' Deleoro" not in updated_session
-        assert "[[Severian 'Seven' Emberwatch|Severian Emberwatch]]" in updated_session or "[[Severian 'Seven' Emberwatch|Seven]]" in updated_session
-        assert "[[Antoni 'Boney Toney' Deleoro|Anthony 'Boney Toney' Deleoro]]" in updated_session or "[[Antoni 'Boney Toney' Deleoro]]" in updated_session
+        assert (
+            "Anthony '[[Antoni 'Boney Toney' Deleoro|Boney Toney]]' Deleoro"
+            not in updated_session
+        )
+        assert (
+            "[[Severian 'Seven' Emberwatch|Severian Emberwatch]]" in updated_session
+            or "[[Severian 'Seven' Emberwatch|Seven]]" in updated_session
+        )
+        assert (
+            "[[Antoni 'Boney Toney' Deleoro|Anthony 'Boney Toney' Deleoro]]"
+            in updated_session
+            or "[[Antoni 'Boney Toney' Deleoro]]" in updated_session
+        )
 
     def test_improve_relationships_are_canonical_plain_links_without_duplicates(self):
         snapshot = {
@@ -766,8 +791,8 @@ class TestImproveVault:
                 "## Timeline\n\n"
                 "_No timeline entries yet._\n\n"
                 "## Relationships\n\n"
-                "- [[Severian “Seven” Emberwatch|Severian \"Seven\" Emberwatch]]\n"
-                "- [[Severian “Seven” Emberwatch|Severian \"Seven\" Emberwatch]]\n"
+                '- [[Severian “Seven” Emberwatch|Severian "Seven" Emberwatch]]\n'
+                '- [[Severian “Seven” Emberwatch|Severian "Seven" Emberwatch]]\n'
                 "- [[Antoni ‘Boney Toney’ Deleoro|Antoni 'Boney Toney' Deleoro]]\n\n"
                 "## Notable Items\n\n"
                 "_No notable items recorded yet._\n\n"
@@ -806,7 +831,7 @@ class TestImproveVault:
         ][-1]
         assert "- [[Severian 'Seven' Emberwatch]]" in updated_party
         assert "- [[Antoni 'Boney Toney' Deleoro]]" in updated_party
-        assert "|Severian \"Seven\" Emberwatch" not in updated_party
+        assert '|Severian "Seven" Emberwatch' not in updated_party
         assert "|Antoni 'Boney Toney' Deleoro" not in updated_party
         assert updated_party.count("- [[Severian 'Seven' Emberwatch]]") == 1
 
@@ -900,7 +925,10 @@ class TestImproveVault:
         assert "Trevor dropped a Moonbeam" not in updated_party
         assert "Bastiën hurled a Cloud of Daggers" not in updated_party
         assert "[[Macarius Tideweaver|Macarius]] dropped a Moonbeam" in updated_party
-        assert "[[Severian 'Seven' Emberwatch|Seven]] hurled a Cloud of Daggers" in updated_party
+        assert (
+            "[[Severian 'Seven' Emberwatch|Seven]] hurled a Cloud of Daggers"
+            in updated_party
+        )
 
     def test_improve_removes_party_self_links_from_relationships(self):
         snapshot = {
@@ -984,10 +1012,20 @@ class TestImproveVault:
             for call in cli.create.call_args_list
             if call.args[0] == "Timeline.md"
         ][-1]
-        assert "[[Severian “Seven” Emberwatch|Severian]] Emberwatch" not in updated_timeline
-        assert "Anthony '[[Antoni 'Boney Toney' Deleoro|Boney Toney]]' Deleoro" not in updated_timeline
+        assert (
+            "[[Severian “Seven” Emberwatch|Severian]] Emberwatch"
+            not in updated_timeline
+        )
+        assert (
+            "Anthony '[[Antoni 'Boney Toney' Deleoro|Boney Toney]]' Deleoro"
+            not in updated_timeline
+        )
         assert "[[Severian 'Seven' Emberwatch|Severian Emberwatch]]" in updated_timeline
-        assert "[[Antoni 'Boney Toney' Deleoro]]" in updated_timeline or "[[Antoni 'Boney Toney' Deleoro|Antoni 'Boney Toney' Deleoro]]" in updated_timeline
+        assert (
+            "[[Antoni 'Boney Toney' Deleoro]]" in updated_timeline
+            or "[[Antoni 'Boney Toney' Deleoro|Antoni 'Boney Toney' Deleoro]]"
+            in updated_timeline
+        )
 
     def test_improve_links_ascii_variant_of_accented_party_name(self):
         snapshot = {

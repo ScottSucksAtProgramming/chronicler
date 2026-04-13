@@ -43,7 +43,9 @@ class TestChunkNote:
         assert not any(c.strip() == "" for c in contents)
 
     def test_extracts_type_from_frontmatter(self):
-        content = "---\ntype: location\nname: Spire\n---\n# The Black Spire\n\nA cult site."
+        content = (
+            "---\ntype: location\nname: Spire\n---\n# The Black Spire\n\nA cult site."
+        )
         chunks = VaultIndexer.chunk_note("Locations/Spire.md", content)
         assert all(c.note_type == "location" for c in chunks)
 
@@ -63,10 +65,12 @@ class TestIndexVault:
         }
 
         mock_embed_client = MagicMock()
-        mock_embed_client.embed_batch = AsyncMock(return_value=[
-            [0.1] * 768,
-            [0.2] * 768,
-        ])
+        mock_embed_client.embed_batch = AsyncMock(
+            return_value=[
+                [0.1] * 768,
+                [0.2] * 768,
+            ]
+        )
 
         mock_collection = MagicMock()
 

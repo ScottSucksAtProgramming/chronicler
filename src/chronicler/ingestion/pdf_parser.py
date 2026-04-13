@@ -147,10 +147,12 @@ def parse_plaud_pdf(pdf_path: Path) -> ParsedPDF:
         if _is_section_header(stripped):
             # Save the previous section if any
             if current_section_title is not None:
-                sections.append(PDFSection(
-                    title=current_section_title,
-                    content="\n".join(current_section_lines).strip(),
-                ))
+                sections.append(
+                    PDFSection(
+                        title=current_section_title,
+                        content="\n".join(current_section_lines).strip(),
+                    )
+                )
             current_section_title = stripped
             current_section_lines = []
         else:
@@ -159,9 +161,11 @@ def parse_plaud_pdf(pdf_path: Path) -> ParsedPDF:
 
     # Save the last open section
     if current_section_title is not None:
-        sections.append(PDFSection(
-            title=current_section_title,
-            content="\n".join(current_section_lines).strip(),
-        ))
+        sections.append(
+            PDFSection(
+                title=current_section_title,
+                content="\n".join(current_section_lines).strip(),
+            )
+        )
 
     return ParsedPDF(title=title, sections=sections, full_text=full_text)

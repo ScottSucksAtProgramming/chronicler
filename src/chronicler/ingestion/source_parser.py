@@ -48,7 +48,9 @@ def _extract_generic_pdf_text(path: Path) -> str:
         raise UnsupportedSourceError(f"Could not parse PDF source: {path}") from exc
 
     if not page_texts:
-        raise UnsupportedSourceError(f"No text could be extracted from PDF source: {path}")
+        raise UnsupportedSourceError(
+            f"No text could be extracted from PDF source: {path}"
+        )
 
     return "\n".join(page_texts)
 

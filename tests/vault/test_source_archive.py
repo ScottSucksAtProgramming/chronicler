@@ -1,7 +1,5 @@
 """Tests for archiving imported source materials."""
 
-from pathlib import Path
-
 from chronicler.models import DocumentType, SourceClassification, SourceDocument
 from chronicler.vault.source_archive import archive_source_document
 
@@ -10,7 +8,9 @@ def test_archive_source_copies_original_and_metadata(tmp_path) -> None:
     vault_path = tmp_path / "vault"
     vault_path.mkdir()
     source_file = tmp_path / "legacy_note.md"
-    source_file.write_text("# Old Notes\n\nTheron mapped the marsh chapel.", encoding="utf-8")
+    source_file.write_text(
+        "# Old Notes\n\nTheron mapped the marsh chapel.", encoding="utf-8"
+    )
     document = SourceDocument(
         source_path=source_file,
         original_filename="legacy_note.md",
@@ -52,7 +52,9 @@ def test_archive_source_records_source_attribution_when_available(tmp_path) -> N
     vault_path = tmp_path / "vault"
     vault_path.mkdir()
     source_file = tmp_path / "background.txt"
-    source_file.write_text("Notes from DM Jared about the marsh chapel.", encoding="utf-8")
+    source_file.write_text(
+        "Notes from DM Jared about the marsh chapel.", encoding="utf-8"
+    )
     document = SourceDocument(
         source_path=source_file,
         original_filename="background.txt",

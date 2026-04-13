@@ -70,7 +70,9 @@ class TestVaultManagerPC:
         path = mock_cli.create.call_args[0][0]
         assert path == "Party/Seven.md"
 
-    def test_read_player_characters(self, manager: VaultManager, mock_cli: MagicMock) -> None:
+    def test_read_player_characters(
+        self, manager: VaultManager, mock_cli: MagicMock
+    ) -> None:
         mock_cli.find_notes_in_folder.return_value = ["Party/Seven.md"]
         mock_cli.read.return_value = (
             "---\n"

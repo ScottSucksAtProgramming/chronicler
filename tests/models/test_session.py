@@ -1,6 +1,5 @@
 """Tests for session-related data models."""
 
-import pytest
 from chronicler.models.session import (
     NormalizedSession,
     TranscriptSegment,

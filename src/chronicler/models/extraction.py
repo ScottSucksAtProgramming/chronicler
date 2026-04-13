@@ -65,7 +65,13 @@ class QualityScore(BaseModel):
     @property
     def failed_dimensions(self) -> list[str]:
         failures = []
-        for name in ["completeness", "accuracy", "coherence", "relevance", "linking_quality"]:
+        for name in [
+            "completeness",
+            "accuracy",
+            "coherence",
+            "relevance",
+            "linking_quality",
+        ]:
             if getattr(self, name) < _QUALITY_THRESHOLD:
                 failures.append(name)
         return failures

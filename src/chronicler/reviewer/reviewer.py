@@ -79,17 +79,21 @@ def review_vault(cli) -> ReviewReport:
         logger.info("Loaded %d notes for review", len(snapshot))
     except Exception as exc:
         logger.error("Failed to load vault notes: %s", exc)
-        return ReviewReport(findings=[
-            ReviewFinding(
-                check="load_vault",
-                severity=Severity.ERROR,
-                file="",
-                detail=f"Failed to load vault: {exc}",
-            )
-        ])
+        return ReviewReport(
+            findings=[
+                ReviewFinding(
+                    check="load_vault",
+                    severity=Severity.ERROR,
+                    file="",
+                    detail=f"Failed to load vault: {exc}",
+                )
+            ]
+        )
 
     # Run all checks against the snapshot
-    all_findings.extend(_run_check("broken_wikilinks", check_broken_wikilinks, snapshot))
+    all_findings.extend(
+        _run_check("broken_wikilinks", check_broken_wikilinks, snapshot)
+    )
     all_findings.extend(_run_check("missing_fields", check_missing_fields, snapshot))
     all_findings.extend(_run_check("orphaned_notes", check_orphaned_notes, snapshot))
     all_findings.extend(_run_check("timeline_gaps", check_timeline_gaps, snapshot))
@@ -103,6 +107,9 @@ def review_vault(cli) -> ReviewReport:
     report = ReviewReport(findings=all_findings)
     logger.info(
         "Vault review complete: %d findings (%d errors, %d warnings, %d info)",
-        report.total_findings, report.error_count, report.warning_count, report.info_count,
+        report.total_findings,
+        report.error_count,
+        report.warning_count,
+        report.info_count,
     )
     return report

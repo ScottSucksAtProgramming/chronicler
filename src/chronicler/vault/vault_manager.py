@@ -23,7 +23,11 @@ from chronicler.models.entities import (
     PlotThread,
     ThreadStatus,
 )
-from chronicler.models.extraction import AgentQuestion, ExtractionResult, KnowledgeIngestResult
+from chronicler.models.extraction import (
+    AgentQuestion,
+    ExtractionResult,
+    KnowledgeIngestResult,
+)
 from chronicler.models.session import SessionRecap
 from chronicler.vault.dedup import find_match
 from chronicler.vault.note_renderer import (
@@ -79,21 +83,11 @@ _INIT_FILES: dict[str, str] = {
     "_Agent/Review-Log.md": (
         "---\ntype: agent-log\ntitle: Review Log\n---\n\n# Review Log\n"
     ),
-    "_Agent/Memory/entity-aliases.md": (
-        "---\ntype: agent-memory\n---\n\n"
-    ),
-    "_Agent/Memory/player-characters.md": (
-        "---\ntype: agent-memory\n---\n\n"
-    ),
-    "_Agent/Memory/extraction-rules.md": (
-        "---\ntype: agent-memory\n---\n\n"
-    ),
-    "_Agent/Memory/campaign-patterns.md": (
-        "---\ntype: agent-memory\n---\n\n"
-    ),
-    "_Agent/Memory/user-preferences.md": (
-        "---\ntype: agent-memory\n---\n\n"
-    ),
+    "_Agent/Memory/entity-aliases.md": ("---\ntype: agent-memory\n---\n\n"),
+    "_Agent/Memory/player-characters.md": ("---\ntype: agent-memory\n---\n\n"),
+    "_Agent/Memory/extraction-rules.md": ("---\ntype: agent-memory\n---\n\n"),
+    "_Agent/Memory/campaign-patterns.md": ("---\ntype: agent-memory\n---\n\n"),
+    "_Agent/Memory/user-preferences.md": ("---\ntype: agent-memory\n---\n\n"),
     "_Agent/Memory/vault-guide.md": (
         "---\ntype: agent-memory\ntitle: Vault Guide\n---\n\n"
         "# Vault Guide\n\n"
@@ -147,7 +141,12 @@ class VaultManager:
         if existing and not update_existing:
             return
         path = existing or f"Locations/{loc.name}.md"
-        self.cli.create(path, render_location_note(loc, child_locations=self._find_child_locations(loc.name)))
+        self.cli.create(
+            path,
+            render_location_note(
+                loc, child_locations=self._find_child_locations(loc.name)
+            ),
+        )
 
     def write_faction(self, faction: Faction, update_existing: bool = False) -> None:
         """Create (or optionally update) a Faction note in ``Factions/``."""
@@ -283,7 +282,9 @@ class VaultManager:
                 existing_content = self.cli.read(existing)
             except Exception:
                 existing_content = ""
-            updated = self._apply_source_update(existing_content, loc.source_attribution, loc.description)
+            updated = self._apply_source_update(
+                existing_content, loc.source_attribution, loc.description
+            )
             updated = self._apply_location_relationships(
                 updated,
                 loc,
@@ -297,14 +298,18 @@ class VaultManager:
     def _write_source_faction(self, faction: Faction) -> None:
         existing = self._find_existing(faction.name, "Factions/")
         if existing and faction.source_attribution:
-            self._merge_source_update(existing, faction.source_attribution, faction.description)
+            self._merge_source_update(
+                existing, faction.source_attribution, faction.description
+            )
             return
         self.write_faction(faction)
 
     def _write_source_loot(self, item: LootItem) -> None:
         existing = self._find_existing(item.name, "Loot/")
         if existing and item.source_attribution:
-            self._merge_source_update(existing, item.source_attribution, item.description)
+            self._merge_source_update(
+                existing, item.source_attribution, item.description
+            )
             return
         self.write_loot(item)
 
@@ -334,13 +339,17 @@ class VaultManager:
         cleaned = self._strip_source_update_block(existing)
         return self._append_description_paragraph(cleaned, description)
 
-    def _merge_location_relationships(self, path: str, loc: Location, child_locations: list[str] | None = None) -> None:
+    def _merge_location_relationships(
+        self, path: str, loc: Location, child_locations: list[str] | None = None
+    ) -> None:
         """Append or replace a managed location-relationship section."""
         try:
             existing = self.cli.read(path)
         except Exception:
             existing = ""
-        updated = self._apply_location_relationships(existing, loc, child_locations=child_locations)
+        updated = self._apply_location_relationships(
+            existing, loc, child_locations=child_locations
+        )
         if updated != existing:
             self.cli.create(path, updated)
 
@@ -357,9 +366,13 @@ class VaultManager:
         if loc.parent_location:
             relationship_lines.append(f"**Belongs To:** [[{loc.parent_location}]]")
         if adjacency_links:
-            relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in adjacency_links)}")
+            relationship_lines.append(
+                f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in adjacency_links)}"
+            )
         if child_locations:
-            relationship_lines.append(f"**Contains:** {', '.join(f'[[{name}]]' for name in child_locations)}")
+            relationship_lines.append(
+                f"**Contains:** {', '.join(f'[[{name}]]' for name in child_locations)}"
+            )
 
         cleaned = self._strip_location_relationship_block(existing)
         return self._upsert_location_summary_lines(cleaned, relationship_lines)
@@ -377,9 +390,17 @@ class VaultManager:
             name=loc.parent_location,
             source_attribution="Derived location relationship",
         )
-        self._merge_location_relationships(parent_path, parent_loc, child_locations=self._find_child_locations(loc.parent_location, pending_children=[loc.name]))
+        self._merge_location_relationships(
+            parent_path,
+            parent_loc,
+            child_locations=self._find_child_locations(
+                loc.parent_location, pending_children=[loc.name]
+            ),
+        )
 
-    def _find_child_locations(self, parent_name: str, pending_children: list[str] | None = None) -> list[str]:
+    def _find_child_locations(
+        self, parent_name: str, pending_children: list[str] | None = None
+    ) -> list[str]:
         """Return child locations whose frontmatter points at *parent_name*."""
         notes = self.cli.find_notes_in_folder("Locations/")
         children: list[str] = []
@@ -394,7 +415,11 @@ class VaultManager:
                 f"**Belongs To:** [[{parent_name}]]" in content
                 or f"**Contained In:** [[{parent_name}]]" in content
             )
-            if parent_value == f"[[{parent_name}]]" or parent_value == parent_name or body_matches_parent:
+            if (
+                parent_value == f"[[{parent_name}]]"
+                or parent_value == parent_name
+                or body_matches_parent
+            ):
                 name = fm.get("name")
                 if name:
                     children.append(name)
@@ -440,7 +465,9 @@ class VaultManager:
         return content
 
     @staticmethod
-    def _upsert_location_summary_lines(content: str, relationship_lines: list[str]) -> str:
+    def _upsert_location_summary_lines(
+        content: str, relationship_lines: list[str]
+    ) -> str:
         lines = content.splitlines()
         if not lines:
             return content
@@ -463,23 +490,31 @@ class VaultManager:
             return "\n".join(filtered).rstrip() + "\n"
 
         insert_at = None
-        blank_seen_after_title = False
         for idx, line in enumerate(filtered):
             if idx == 0:
                 continue
             if filtered[0].startswith("---"):
                 continue
-        title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+        title_idx = next(
+            (i for i, line in enumerate(filtered) if line.startswith("# ")), None
+        )
         if title_idx is None:
             return "\n".join(filtered).rstrip() + "\n"
-        insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+        insert_at = (
+            title_idx + 2
+            if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == ""
+            else title_idx + 1
+        )
         while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
             insert_at += 1
         if insert_at < len(filtered) and filtered[insert_at] != "":
             filtered.insert(insert_at, "")
         for offset, line in enumerate(relationship_lines):
             filtered.insert(insert_at + offset, line)
-        if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+        if (
+            insert_at + len(relationship_lines) < len(filtered)
+            and filtered[insert_at + len(relationship_lines)] != ""
+        ):
             filtered.insert(insert_at + len(relationship_lines), "")
         return "\n".join(filtered).rstrip() + "\n"
 
@@ -591,9 +626,7 @@ class VaultManager:
             lines.append(f"  character_name: {pc.character_name}")
             if pc.character_class:
                 lines.append(f"  character_class: {pc.character_class}")
-        self.cli.create(
-            "_Agent/Memory/player-characters.md", "\n".join(lines) + "\n"
-        )
+        self.cli.create("_Agent/Memory/player-characters.md", "\n".join(lines) + "\n")
 
     def read_player_characters(self) -> list[PlayerCharacter]:
         """Read player characters from ``Party/``, falling back to agent memory."""
@@ -740,7 +773,6 @@ class VaultManager:
             except Exception:
                 continue
             fm = self._parse_frontmatter(content)
-            title = fm.get("title", "")
             snum = fm.get("session_number", "")
 
             # Extract Summary section
@@ -803,7 +835,11 @@ class VaultManager:
             return []
         pcs: list[PlayerCharacter] = []
         for entry in data:
-            if isinstance(entry, dict) and "player_name" in entry and "character_name" in entry:
+            if (
+                isinstance(entry, dict)
+                and "player_name" in entry
+                and "character_name" in entry
+            ):
                 pcs.append(PlayerCharacter(**entry))
         return pcs
 
@@ -852,4 +888,4 @@ class VaultManager:
                 if line.strip().startswith("## "):
                     break
                 result.append(line)
-        return " ".join(l.strip() for l in result if l.strip())
+        return " ".join(line.strip() for line in result if line.strip())

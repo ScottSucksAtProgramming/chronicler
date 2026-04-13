@@ -21,9 +21,11 @@ class TestImproveCommand:
         mock_report.changed_files = ["Sessions/Session-001.md"]
         mock_report.question_files = ["_Agent/Questions/question.md"]
 
-        with patch("chronicler.cli.main.Settings") as MockSettings, \
-             patch("chronicler.cli.main.ObsidianCLI"), \
-             patch("chronicler.cli.main.improve_vault", return_value=mock_report):
+        with (
+            patch("chronicler.cli.main.Settings") as MockSettings,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.improve_vault", return_value=mock_report),
+        ):
             MockSettings.return_value = MagicMock(vault_name="Test")
             result = runner.invoke(app, ["improve"])
 

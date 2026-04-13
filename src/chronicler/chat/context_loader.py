@@ -104,7 +104,9 @@ def _discover_fallback_paths(
 
     fallback_paths: list[str] = []
     normalized_query = _normalize(query)
-    alias_terms = [_normalize(term) for term in _extract_alias_terms(core_notes) if term]
+    alias_terms = [
+        _normalize(term) for term in _extract_alias_terms(core_notes) if term
+    ]
 
     if _is_meta_question(query):
         session_paths = [path for path in all_files if path.startswith("Sessions/")]
@@ -126,7 +128,9 @@ def _discover_fallback_paths(
             fallback_paths.append(path)
             continue
         if any(alias and alias in normalized_query for alias in alias_terms):
-            if path.startswith(("Sessions/", "Locations/", "NPCs/", "Factions/", "Loot/")):
+            if path.startswith(
+                ("Sessions/", "Locations/", "NPCs/", "Factions/", "Loot/")
+            ):
                 fallback_paths.append(path)
 
     if normalized_query:
@@ -142,12 +146,17 @@ def _discover_fallback_paths(
                 content_matches.append(path)
 
         for path in content_matches:
-            if path.startswith(("Sessions/", "Locations/", "NPCs/", "Factions/", "Loot/")):
+            if path.startswith(
+                ("Sessions/", "Locations/", "NPCs/", "Factions/", "Loot/")
+            ):
                 fallback_paths.append(path)
 
     return fallback_paths
 
-def load_chat_context(cli, query: str, retrieval_results: list[SearchResult]) -> ChatContextBundle:
+
+def load_chat_context(
+    cli, query: str, retrieval_results: list[SearchResult]
+) -> ChatContextBundle:
     """Load core vault notes plus direct reads for retrieval source files."""
     core_notes: list[DirectVaultNote] = []
     seen_core_paths: set[str] = set()

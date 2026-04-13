@@ -13,19 +13,19 @@ _PARAGRAPH_SPLIT_RE = re.compile(r"\n\s*\n+")
 @dataclass
 class TimestampedSegment:
     """A chunk of transcript text with its timestamp."""
+
     timestamp: str
     text: str
 
 
 def _split_untimestamped_text(raw_text: str) -> list[TimestampedSegment]:
     """Split untimestamped transcripts conservatively on paragraph boundaries."""
-    blocks = [block.strip() for block in _PARAGRAPH_SPLIT_RE.split(raw_text) if block.strip()]
+    blocks = [
+        block.strip() for block in _PARAGRAPH_SPLIT_RE.split(raw_text) if block.strip()
+    ]
     if not blocks:
         return []
-    return [
-        TimestampedSegment(timestamp="00:00:00", text=block)
-        for block in blocks
-    ]
+    return [TimestampedSegment(timestamp="00:00:00", text=block) for block in blocks]
 
 
 def parse_transcript(raw_text: str) -> list[TimestampedSegment]:

@@ -13,7 +13,6 @@ from chronicler.models.entities import (
 from chronicler.models.context import PlayerCharacter
 from chronicler.models.session import SessionRecap
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -85,7 +84,9 @@ def _build_link_map(
     loot_names: list[str],
     player_character_names: list[str],
 ) -> dict[str, str]:
-    names = npc_names + location_names + faction_names + loot_names + player_character_names
+    names = (
+        npc_names + location_names + faction_names + loot_names + player_character_names
+    )
     return {name: wikify(name) for name in names if name}
 
 
@@ -104,7 +105,9 @@ def _link_text(text: str, link_map: dict[str, str]) -> str:
 
     for name in sorted(link_map, key=len, reverse=True):
         pattern = re.compile(rf"(?<![\w'\"“”‘’]){re.escape(name)}(?![\w'\"“”‘’])")
-        protected = pattern.sub(lambda _: _stash(re.match(r".*", link_map[name])), protected)
+        protected = pattern.sub(
+            lambda _: _stash(re.match(r".*", link_map[name])), protected
+        )
 
     for i, original in enumerate(placeholders):
         protected = protected.replace(f"__WIKILINK_PLACEHOLDER_{i}__", original)
@@ -169,7 +172,7 @@ def render_pc_note(pc: PlayerCharacter) -> str:
         "",
         "## Overview",
         "",
-        f"{pc.character_name} is played by {pc.player_name}."
+        f"{pc.character_name} is played by {pc.player_name}.",
     ]
     if pc.character_class:
         body_lines[-1] += f" They are a {pc.character_class}."
@@ -254,7 +257,9 @@ def render_npc_note(npc: NPC) -> str:
 # ---------------------------------------------------------------------------
 
 
-def render_location_note(loc: Location, child_locations: list[str] | None = None) -> str:
+def render_location_note(
+    loc: Location, child_locations: list[str] | None = None
+) -> str:
     """Render a Location entity as an Obsidian markdown note."""
     adjacency_links = loc.adjacent_to or loc.connected_to
     fm = _frontmatter(
@@ -384,8 +389,6 @@ def render_session_note(
     player_characters: list[PlayerCharacter] | None = None,
 ) -> str:
     """Render a SessionRecap as an Obsidian session note."""
-    session_id = f"Session-{recap.session_number:03d}"
-
     npc_names = [npc.name for npc in npcs]
     location_names = [loc.name for loc in locations]
     faction_names = [faction.name for faction in (factions or [])]
@@ -500,9 +503,7 @@ def render_open_threads(threads: list[PlotThread]) -> str:
             if thread.introduced_in
             else f"source {thread.source_attribution}"
         )
-        lines.append(
-            f"- **{thread.title}** ({provenance}): {thread.summary}"
-        )
+        lines.append(f"- **{thread.title}** ({provenance}): {thread.summary}")
 
     return "\n".join(lines) + "\n"
 
@@ -531,8 +532,8 @@ def render_dashboard(
         "",
         "## Stats",
         "",
-        f"| Category   | Count |",
-        f"|------------|-------|",
+        "| Category   | Count |",
+        "|------------|-------|",
         f"| NPCs       | {npc_count} |",
         f"| Locations  | {location_count} |",
         f"| Threads    | {thread_count} |",

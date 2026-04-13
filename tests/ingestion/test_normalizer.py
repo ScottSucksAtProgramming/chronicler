@@ -13,7 +13,9 @@ from chronicler.models.session import NormalizedSession
 def sample_pdf():
     return ParsedPDF(
         title="No Loose Ends Investigation",
-        sections=[PDFSection(title="Reconnaissance", content="The party scouted the area.")],
+        sections=[
+            PDFSection(title="Reconnaissance", content="The party scouted the area.")
+        ],
         full_text="Session summary text about the investigation.",
     )
 
@@ -31,10 +33,12 @@ class TestNormalizeSession:
     @pytest.mark.asyncio
     async def test_normalize_with_pdf_and_transcript(self, sample_pdf, sample_segments):
         mock_gateway = MagicMock()
-        mock_gateway.complete = AsyncMock(return_value=MagicMock(
-            content='{"classifications": [{"index": 0, "is_in_game": true}, {"index": 1, "is_in_game": false}, {"index": 2, "is_in_game": true}]}',
-            usage=MagicMock(total_tokens=50),
-        ))
+        mock_gateway.complete = AsyncMock(
+            return_value=MagicMock(
+                content='{"classifications": [{"index": 0, "is_in_game": true}, {"index": 1, "is_in_game": false}, {"index": 2, "is_in_game": true}]}',
+                usage=MagicMock(total_tokens=50),
+            )
+        )
 
         result = await normalize_session(
             session_number=22,
@@ -68,10 +72,12 @@ class TestNormalizeSession:
     @pytest.mark.asyncio
     async def test_normalize_transcript_only(self, sample_segments):
         mock_gateway = MagicMock()
-        mock_gateway.complete = AsyncMock(return_value=MagicMock(
-            content='{"classifications": [{"index": 0, "is_in_game": true}, {"index": 1, "is_in_game": true}, {"index": 2, "is_in_game": true}]}',
-            usage=MagicMock(total_tokens=50),
-        ))
+        mock_gateway.complete = AsyncMock(
+            return_value=MagicMock(
+                content='{"classifications": [{"index": 0, "is_in_game": true}, {"index": 1, "is_in_game": true}, {"index": 2, "is_in_game": true}]}',
+                usage=MagicMock(total_tokens=50),
+            )
+        )
 
         result = await normalize_session(
             session_number=22,

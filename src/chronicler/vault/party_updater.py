@@ -29,7 +29,9 @@ def update_party_note_from_sessions(
     frontmatter, sections = _parse_party_note(note_content)
     aliases = _party_aliases(frontmatter, pc)
     sections["Overview"] = [_overview_line(pc)]
-    sections["Aliases"] = [f"- {alias}" for alias in aliases if alias != pc.character_name]
+    sections["Aliases"] = [
+        f"- {alias}" for alias in aliases if alias != pc.character_name
+    ]
     sections["Known Facts"] = _known_facts(pc)
     timeline_entries: list[str] = []
     relationship_entries: list[str] = []
@@ -44,9 +46,13 @@ def update_party_note_from_sessions(
         sections["Timeline"] = _merge_unique([], timeline_entries)
     else:
         sections["Timeline"] = _merge_unique(sections["Timeline"], timeline_entries)
-    sections["Relationships"] = _merge_unique(sections["Relationships"], relationship_entries)
+    sections["Relationships"] = _merge_unique(
+        sections["Relationships"], relationship_entries
+    )
     if aliases:
-        sections["Aliases"] = [f"- {alias}" for alias in aliases if alias != pc.character_name]
+        sections["Aliases"] = [
+            f"- {alias}" for alias in aliases if alias != pc.character_name
+        ]
 
     return _render_party_note(frontmatter, pc, sections)
 
@@ -112,7 +118,11 @@ def _session_id(path: str, content: str) -> str:
 
 def _character_lines(session_content: str, aliases: list[str]) -> list[str]:
     lines: list[str] = []
-    body = session_content.split("---", 2)[2].lstrip("\n") if session_content.startswith("---") else session_content
+    body = (
+        session_content.split("---", 2)[2].lstrip("\n")
+        if session_content.startswith("---")
+        else session_content
+    )
     for raw_line in body.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -153,7 +163,9 @@ def _merge_unique(existing: list[str], additions: list[str]) -> list[str]:
     return merged
 
 
-def _render_party_note(frontmatter: dict, pc: PlayerCharacter, sections: dict[str, list[str]]) -> str:
+def _render_party_note(
+    frontmatter: dict, pc: PlayerCharacter, sections: dict[str, list[str]]
+) -> str:
     lines = [
         "---",
         "type: player-character",
@@ -162,10 +174,12 @@ def _render_party_note(frontmatter: dict, pc: PlayerCharacter, sections: dict[st
     ]
     character_class = frontmatter.get("character_class", pc.character_class)
     if character_class:
-        lines.append(f"character_class: {_yaml_scalar(character_class, key='character_class')}")
+        lines.append(
+            f"character_class: {_yaml_scalar(character_class, key='character_class')}"
+        )
     aliases = frontmatter.get("alias") or frontmatter.get("aliases")
     if isinstance(aliases, str):
-        lines.append(f'alias: {_yaml_list([aliases])}')
+        lines.append(f"alias: {_yaml_list([aliases])}")
     elif isinstance(aliases, list) and aliases:
         lines.append(f"alias: {_yaml_list([str(item) for item in aliases])}")
     lines += [

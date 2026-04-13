@@ -34,7 +34,9 @@ class TestParseSourceDocument:
         assert document.extracted_text is not None
         assert "friendly face" in document.extracted_text.lower()
 
-    def test_parse_pdf_source_falls_back_to_generic_pdf_text(self, tmp_path, monkeypatch) -> None:
+    def test_parse_pdf_source_falls_back_to_generic_pdf_text(
+        self, tmp_path, monkeypatch
+    ) -> None:
         pdf_path = tmp_path / "old-notes.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 fake content")
 
@@ -44,7 +46,9 @@ class TestParseSourceDocument:
         class FakePDF:
             pages = [
                 SimpleNamespace(extract_text=lambda: "Old notes from DM Jared"),
-                SimpleNamespace(extract_text=lambda: "The marsh chapel hides a shrine."),
+                SimpleNamespace(
+                    extract_text=lambda: "The marsh chapel hides a shrine."
+                ),
             ]
 
             def __enter__(self):
@@ -55,7 +59,9 @@ class TestParseSourceDocument:
 
         fake_pdfplumber = SimpleNamespace(open=lambda path: FakePDF())
 
-        monkeypatch.setattr("chronicler.ingestion.source_parser.parse_plaud_pdf", fake_parse_plaud_pdf)
+        monkeypatch.setattr(
+            "chronicler.ingestion.source_parser.parse_plaud_pdf", fake_parse_plaud_pdf
+        )
         monkeypatch.setitem(__import__("sys").modules, "pdfplumber", fake_pdfplumber)
 
         document = parse_source_document(pdf_path)

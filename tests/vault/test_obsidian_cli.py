@@ -1,6 +1,5 @@
 """Tests for the Obsidian CLI wrapper."""
 
-import json
 import pytest
 from unittest.mock import patch, MagicMock
 from chronicler.vault.obsidian_cli import ObsidianCLI, ObsidianCLIError
@@ -103,7 +102,11 @@ class TestObsidianCLI:
 
     def test_find_notes_in_folder(self, cli):
         with patch.object(cli, "list_files") as mock_list:
-            mock_list.return_value = ["NPCs/Theron.md", "NPCs/Sylvie.md", "Sessions/S01.md"]
+            mock_list.return_value = [
+                "NPCs/Theron.md",
+                "NPCs/Sylvie.md",
+                "Sessions/S01.md",
+            ]
             result = cli.find_notes_in_folder("NPCs/")
             assert result == ["NPCs/Theron.md", "NPCs/Sylvie.md"]
 

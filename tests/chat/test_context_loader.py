@@ -6,7 +6,9 @@ from chronicler.retrieval.retrieval import SearchResult
 
 
 class TestChatContextLoader:
-    def test_load_chat_context_falls_back_to_filename_matches_for_entity_queries(self) -> None:
+    def test_load_chat_context_falls_back_to_filename_matches_for_entity_queries(
+        self,
+    ) -> None:
         from chronicler.chat.context_loader import load_chat_context
 
         cli = MagicMock()
@@ -36,7 +38,9 @@ class TestChatContextLoader:
         assert "Locations/Small Merchant Vessel.md" in paths
         assert "Sessions/Session-002.md" in paths
 
-    def test_load_chat_context_falls_back_to_content_search_for_missing_entity_names(self) -> None:
+    def test_load_chat_context_falls_back_to_content_search_for_missing_entity_names(
+        self,
+    ) -> None:
         from chronicler.chat.context_loader import load_chat_context
 
         cli = MagicMock()
@@ -49,7 +53,9 @@ class TestChatContextLoader:
             "Locations/Small Merchant Vessel.md",
             "Sessions/Session-002.md",
         ]
-        cli.search.side_effect = lambda query: ["Sessions/Session-002.md"] if query == "Black Cherry" else []
+        cli.search.side_effect = lambda query: (
+            ["Sessions/Session-002.md"] if query == "Black Cherry" else []
+        )
         cli.read.side_effect = lambda path: {
             "Sessions/Session-002.md": "# Session 2\n## Summary\nThe party swam for the Black Cherry.",
         }[path]
@@ -63,7 +69,9 @@ class TestChatContextLoader:
         paths = {note.path for note in bundle.supporting_notes}
         assert "Sessions/Session-002.md" in paths
 
-    def test_load_chat_context_detects_meta_questions_and_reads_session_notes(self) -> None:
+    def test_load_chat_context_detects_meta_questions_and_reads_session_notes(
+        self,
+    ) -> None:
         from chronicler.chat.context_loader import load_chat_context
 
         cli = MagicMock()
@@ -121,7 +129,9 @@ class TestChatContextLoader:
             ],
         }.get(folder, [])
 
-        bundle = load_chat_context(cli=cli, query="Who are the player characters?", retrieval_results=[])
+        bundle = load_chat_context(
+            cli=cli, query="Who are the player characters?", retrieval_results=[]
+        )
 
         paths = {note.path for note in bundle.core_notes}
         assert "_Agent/Memory/vault-guide.md" in paths
@@ -157,7 +167,11 @@ class TestChatContextLoader:
             ),
         ]
 
-        bundle = load_chat_context(cli=cli, query="What happened in session 2?", retrieval_results=retrieval_results)
+        bundle = load_chat_context(
+            cli=cli,
+            query="What happened in session 2?",
+            retrieval_results=retrieval_results,
+        )
 
         paths = {note.path for note in bundle.supporting_notes}
         assert "Sessions/Session-002.md" in paths

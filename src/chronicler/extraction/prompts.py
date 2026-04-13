@@ -26,12 +26,18 @@ def _format_context(context: ContextBundle) -> str:
         parts.append(f"Known Factions: {fac_list}")
 
     if context.active_threads:
-        thread_list = "\n".join(f"  - {t.title}: {t.summary}" for t in context.active_threads)
+        thread_list = "\n".join(
+            f"  - {t.title}: {t.summary}" for t in context.active_threads
+        )
         parts.append(f"Active Plot Threads:\n{thread_list}")
 
     if context.entity_aliases:
-        alias_list = "\n".join(f'  - "{k}" → {v}' for k, v in context.entity_aliases.items())
-        parts.append(f"Entity Aliases (use these to resolve ambiguous references):\n{alias_list}")
+        alias_list = "\n".join(
+            f'  - "{k}" → {v}' for k, v in context.entity_aliases.items()
+        )
+        parts.append(
+            f"Entity Aliases (use these to resolve ambiguous references):\n{alias_list}"
+        )
 
     if context.player_characters:
         pc_list = ", ".join(
@@ -68,7 +74,9 @@ def build_extraction_prompt(
             f"## Raw Transcript (supplementary — use to fill gaps and verify details)\n\n{transcript_text}"
         )
 
-    source_text = "\n\n---\n\n".join(source_parts) if source_parts else "No source text provided."
+    source_text = (
+        "\n\n---\n\n".join(source_parts) if source_parts else "No source text provided."
+    )
 
     return f"""You are extracting structured D&D campaign data from a session recording.
 

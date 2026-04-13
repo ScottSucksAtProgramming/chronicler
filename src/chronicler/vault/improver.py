@@ -130,7 +130,9 @@ def improve_vault(cli) -> ImproveReport:
         updated_snapshot[path] = updated
 
     existing_question_paths = set(snapshot.keys()) | set(report.question_files)
-    location_questions = _collect_location_relationship_questions(updated_snapshot, existing_question_paths)
+    location_questions = _collect_location_relationship_questions(
+        updated_snapshot, existing_question_paths
+    )
     for question_path, source_path, question in location_questions:
         cli.create(question_path, _render_question(question, source_path))
         report.question_count += 1
@@ -196,7 +198,9 @@ def _infer_parent_location(frontmatter: dict, body: str, name: str) -> str | Non
     if isinstance(parent, str) and parent.strip():
         return _strip_wikilink(parent.strip())
 
-    contained_match = re.search(r"\*\*(?:Contained In|Belongs To):\*\*\s+\[\[([^\]]+)\]\]", body)
+    contained_match = re.search(
+        r"\*\*(?:Contained In|Belongs To):\*\*\s+\[\[([^\]]+)\]\]", body
+    )
     if contained_match:
         return _strip_wikilink(contained_match.group(1))
 
@@ -243,22 +247,35 @@ def _upsert_location_relationship_section(
     if parent:
         relationship_lines.append(f"**Belongs To:** [[{parent}]]")
     if child_locations:
-        relationship_lines.append(f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}")
+        relationship_lines.append(
+            f"**Contains:** {', '.join(f'[[{child}]]' for child in child_locations)}"
+        )
     if nearby_locations:
-        relationship_lines.append(f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in nearby_locations)}")
+        relationship_lines.append(
+            f"**Nearby Locations:** {', '.join(f'[[{name}]]' for name in nearby_locations)}"
+        )
     if not relationship_lines:
         return "\n".join(filtered).rstrip() + "\n"
-    title_idx = next((i for i, line in enumerate(filtered) if line.startswith("# ")), None)
+    title_idx = next(
+        (i for i, line in enumerate(filtered) if line.startswith("# ")), None
+    )
     if title_idx is None:
         return "\n".join(filtered).rstrip() + "\n"
-    insert_at = title_idx + 2 if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == "" else title_idx + 1
+    insert_at = (
+        title_idx + 2
+        if title_idx + 1 < len(filtered) and filtered[title_idx + 1] == ""
+        else title_idx + 1
+    )
     while insert_at < len(filtered) and filtered[insert_at].startswith("**"):
         insert_at += 1
     if insert_at < len(filtered) and filtered[insert_at] != "":
         filtered.insert(insert_at, "")
     for offset, line in enumerate(relationship_lines):
         filtered.insert(insert_at + offset, line)
-    if insert_at + len(relationship_lines) < len(filtered) and filtered[insert_at + len(relationship_lines)] != "":
+    if (
+        insert_at + len(relationship_lines) < len(filtered)
+        and filtered[insert_at + len(relationship_lines)] != ""
+    ):
         filtered.insert(insert_at + len(relationship_lines), "")
     return "\n".join(filtered).rstrip() + "\n"
 
@@ -312,17 +329,24 @@ def _merge_source_updates_into_description(body: str) -> str:
 
     description_addition = "\n\n".join(paragraphs)
     if "## Description\n" in body_without_block:
-        section_pattern = re.compile(r"(## Description\n(?:\n)?)(.*?)(\n## |\Z)", re.DOTALL)
+        section_pattern = re.compile(
+            r"(## Description\n(?:\n)?)(.*?)(\n## |\Z)", re.DOTALL
+        )
         match = section_pattern.search(body_without_block)
         if match:
             existing_description = match.group(2).rstrip()
             merged_description = existing_description
             if description_addition not in existing_description:
                 merged_description = (
-                    existing_description if not existing_description else f"{existing_description}\n\n{description_addition}"
+                    existing_description
+                    if not existing_description
+                    else f"{existing_description}\n\n{description_addition}"
                 )
             replacement = f"{match.group(1)}{merged_description}{match.group(3)}"
-            return section_pattern.sub(replacement, body_without_block, count=1).rstrip() + "\n"
+            return (
+                section_pattern.sub(replacement, body_without_block, count=1).rstrip()
+                + "\n"
+            )
 
     return body_without_block + f"\n\n## Description\n\n{description_addition}\n"
 
@@ -367,10 +391,14 @@ def _collect_location_relationship_questions(
 
 def _question_exists(question_path: str, existing_paths: set[str]) -> bool:
     basename = Path(question_path).name
-    return any(Path(path).name == basename for path in existing_paths if "Questions" in path)
+    return any(
+        Path(path).name == basename for path in existing_paths if "Questions" in path
+    )
 
 
-def _location_relationship_question(path: str, frontmatter: dict, body: str) -> AgentQuestion | None:
+def _location_relationship_question(
+    path: str, frontmatter: dict, body: str
+) -> AgentQuestion | None:
     """Return a deterministic relationship question for high-signal unresolved location cues."""
     name = _canonical_name(path, frontmatter)
     description = _extract_section(body, "Description") or body
@@ -378,7 +406,11 @@ def _location_relationship_question(path: str, frontmatter: dict, body: str) -> 
     parent = frontmatter.get("parent_location")
     nearby = frontmatter.get("adjacent_to")
 
-    if not parent and re.search(r"\b(?:district|area|quarter|ward|location|notable area)\b.*\b(?:within|in)\b", plain_description, re.IGNORECASE):
+    if not parent and re.search(
+        r"\b(?:district|area|quarter|ward|location|notable area)\b.*\b(?:within|in)\b",
+        plain_description,
+        re.IGNORECASE,
+    ):
         return AgentQuestion(
             question=f"Which larger location does {name} belong to?",
             context=(
@@ -390,7 +422,11 @@ def _location_relationship_question(path: str, frontmatter: dict, body: str) -> 
             priority=QuestionPriority.MEDIUM,
         )
 
-    if not nearby and re.search(r"\b(?:near|nearby|adjacent|between|next to)\b", plain_description, re.IGNORECASE):
+    if not nearby and re.search(
+        r"\b(?:near|nearby|adjacent|between|next to)\b",
+        plain_description,
+        re.IGNORECASE,
+    ):
         return AgentQuestion(
             question=f"Which nearby locations should be recorded for {name}?",
             context=(
@@ -402,7 +438,9 @@ def _location_relationship_question(path: str, frontmatter: dict, body: str) -> 
             priority=QuestionPriority.MEDIUM,
         )
 
-    if not re.search(r"\*\*Contains:\*\*", body) and re.search(r"\bcontains\b", plain_description, re.IGNORECASE):
+    if not re.search(r"\*\*Contains:\*\*", body) and re.search(
+        r"\bcontains\b", plain_description, re.IGNORECASE
+    ):
         return AgentQuestion(
             question=f"Which locations belong inside {name}?",
             context=(
@@ -457,7 +495,9 @@ def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:
                         _add_mapping(mapping, variant, canonical_name)
 
     for alias, canonical in _read_agent_aliases(snapshot).items():
-        if canonical in {next(iter(targets)) for targets in mapping.values() if len(targets) == 1}:
+        if canonical in {
+            next(iter(targets)) for targets in mapping.values() if len(targets) == 1
+        }:
             _add_mapping(mapping, alias, canonical)
 
     link_map: dict[str, str] = {}
@@ -465,11 +505,15 @@ def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:
     for term, targets in mapping.items():
         if len(targets) == 1:
             canonical = next(iter(targets))
-            link_map[term] = wikify(canonical) if term == canonical else f"[[{canonical}|{term}]]"
+            link_map[term] = (
+                wikify(canonical) if term == canonical else f"[[{canonical}|{term}]]"
+            )
         elif len(targets) > 1:
             ambiguous_terms.add(term)
 
-    canonical_names = {next(iter(targets)) for targets in mapping.values() if len(targets) == 1}
+    canonical_names = {
+        next(iter(targets)) for targets in mapping.values() if len(targets) == 1
+    }
     term_to_canonical: dict[str, str] = {}
     for term, targets in mapping.items():
         if len(targets) != 1:
@@ -488,13 +532,14 @@ def _build_canonical_index(snapshot: dict[str, str]) -> _CanonicalIndex:
 def _name_variants(name: str) -> list[str]:
     variants: set[str] = set()
     normalized = (
-        name.replace("“", '"')
-        .replace("”", '"')
-        .replace("‘", "'")
-        .replace("’", "'")
+        name.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
     )
     variants.add(normalized)
-    ascii_folded = unicodedata.normalize("NFKD", normalized).encode("ascii", "ignore").decode("ascii")
+    ascii_folded = (
+        unicodedata.normalize("NFKD", normalized)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     if ascii_folded and ascii_folded != normalized:
         variants.add(ascii_folded)
     quote_swap = re.sub(r"'([^']+)'", r'"\1"', normalized)
@@ -507,7 +552,11 @@ def _name_variants(name: str) -> list[str]:
     stripped = re.sub(r"\s{2,}", " ", stripped)
     if stripped and stripped != normalized:
         variants.add(stripped)
-        stripped_ascii = unicodedata.normalize("NFKD", stripped).encode("ascii", "ignore").decode("ascii")
+        stripped_ascii = (
+            unicodedata.normalize("NFKD", stripped)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
         if stripped_ascii and stripped_ascii != stripped:
             variants.add(stripped_ascii)
     return [variant for variant in variants if variant and variant != name]
@@ -534,7 +583,9 @@ def _read_agent_aliases(snapshot: dict[str, str]) -> dict[str, str]:
     return aliases
 
 
-def _improve_note(path: str, content: str, index: _CanonicalIndex) -> tuple[str, list[AgentQuestion]]:
+def _improve_note(
+    path: str, content: str, index: _CanonicalIndex
+) -> tuple[str, list[AgentQuestion]]:
     frontmatter = _parse_frontmatter(content)
     body = _strip_frontmatter(content)
     questions: list[AgentQuestion] = []
@@ -696,25 +747,25 @@ def _repair_mixed_name_links(text: str, index: _CanonicalIndex) -> str:
 
 
 def _normalize_quote_style(value: str) -> str:
-    return (
-        value.replace("“", '"')
-        .replace("”", '"')
-        .replace("‘", "'")
-        .replace("’", "'")
-    )
+    return value.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
 
 
 def _matches_canonical_display(candidate: str, canonical: str) -> bool:
     normalized_candidate = _normalize_quote_style(candidate).strip()
     variants = {
         _normalize_quote_style(canonical).strip(),
-        *(_normalize_quote_style(variant).strip() for variant in _name_variants(canonical)),
+        *(
+            _normalize_quote_style(variant).strip()
+            for variant in _name_variants(canonical)
+        ),
     }
     return normalized_candidate in variants
 
 
 def _matches_nickname_surname(alias: str, suffix: str, canonical: str) -> bool:
-    nickname_match = re.search(r'["\']([^"\']+)["\']', _normalize_quote_style(canonical))
+    nickname_match = re.search(
+        r'["\']([^"\']+)["\']', _normalize_quote_style(canonical)
+    )
     surname = _normalize_quote_style(canonical).split()[-1]
     if not nickname_match:
         return False

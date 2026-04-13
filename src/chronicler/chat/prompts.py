@@ -27,20 +27,32 @@ def build_chat_prompt(
     lines: list[str] = []
 
     # --- System instructions ---
-    lines.append("You are a D&D campaign assistant with access to a vault of campaign notes.")
+    lines.append(
+        "You are a D&D campaign assistant with access to a vault of campaign notes."
+    )
     lines.append(
         "Answer questions using ONLY the provided vault context below. "
         "When referencing a note, cite it using [[Note Name]] wikilinks. "
         "If the information is not in the provided context, "
         "say 'I don't have information about that in the vault.'"
     )
-    lines.append("Direct vault notes are authoritative. Retrieval hits are discovery aids and may be incomplete.")
+    lines.append(
+        "Direct vault notes are authoritative. Retrieval hits are discovery aids and may be incomplete."
+    )
     lines.append("Missing retrieval is not the same as missing vault data.")
-    lines.append("If direct notes and retrieval hits disagree, trust the direct vault notes and mention the conflict.")
+    lines.append(
+        "If direct notes and retrieval hits disagree, trust the direct vault notes and mention the conflict."
+    )
     lines.append("do not present inferred relationships as confirmed facts.")
-    lines.append("When something is explicitly stated in a note, prefer phrasing like: 'The vault explicitly says ...'")
-    lines.append("When you are connecting indirect evidence, prefer phrasing like: 'I infer ...'")
-    lines.append("For definition questions such as 'What is X?', if no note directly defines X, say: 'I don't see a note that directly defines X.' Then give a clearly labeled inference only if the surrounding context supports one.")
+    lines.append(
+        "When something is explicitly stated in a note, prefer phrasing like: 'The vault explicitly says ...'"
+    )
+    lines.append(
+        "When you are connecting indirect evidence, prefer phrasing like: 'I infer ...'"
+    )
+    lines.append(
+        "For definition questions such as 'What is X?', if no note directly defines X, say: 'I don't see a note that directly defines X.' Then give a clearly labeled inference only if the surrounding context supports one."
+    )
     lines.append("")
 
     if core_notes:

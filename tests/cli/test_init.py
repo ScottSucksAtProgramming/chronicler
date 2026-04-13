@@ -1,6 +1,5 @@
 """Tests for the init CLI command."""
 
-import pytest
 from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
 from chronicler.cli.main import app
@@ -31,12 +30,16 @@ class TestInitCommand:
         with (
             patch("chronicler.cli.main.Settings", return_value=mock_settings),
             patch("chronicler.cli.main.ObsidianCLI") as mock_cli_cls,
-            patch("chronicler.cli.main.VaultManager", return_value=mock_vm) as mock_vm_cls,
+            patch(
+                "chronicler.cli.main.VaultManager", return_value=mock_vm
+            ) as mock_vm_cls,
         ):
             result = runner.invoke(app, ["init"])
 
         assert result.exit_code == 0
-        mock_cli_cls.assert_called_once_with("TestVault", vault_path=mock_settings.vault_path)
+        mock_cli_cls.assert_called_once_with(
+            "TestVault", vault_path=mock_settings.vault_path
+        )
         mock_vm_cls.assert_called_once_with(mock_cli_cls.return_value)
         mock_vm.init_vault.assert_called_once()
 

@@ -11,7 +11,6 @@ from chronicler.ingestion.banter_filter import (
 from chronicler.ingestion.transcript_parser import TimestampedSegment
 from chronicler.models.session import TranscriptSegment
 
-
 GAME_SEGMENT = TimestampedSegment(
     timestamp="00:17:15",
     text="There is one thing that has been irking me. We have a ship that says no loose ends, and there is that one chap, the friendly face.",
@@ -37,16 +36,20 @@ class TestBanterFilter:
         segments = [GAME_SEGMENT, BANTER_SEGMENT, FOOD_SEGMENT]
 
         mock_gateway = MagicMock()
-        mock_gateway.complete = AsyncMock(return_value=MagicMock(
-            content=json.dumps({
-                "classifications": [
-                    {"index": 0, "is_in_game": True},
-                    {"index": 1, "is_in_game": False},
-                    {"index": 2, "is_in_game": False},
-                ]
-            }),
-            usage=MagicMock(total_tokens=100),
-        ))
+        mock_gateway.complete = AsyncMock(
+            return_value=MagicMock(
+                content=json.dumps(
+                    {
+                        "classifications": [
+                            {"index": 0, "is_in_game": True},
+                            {"index": 1, "is_in_game": False},
+                            {"index": 2, "is_in_game": False},
+                        ]
+                    }
+                ),
+                usage=MagicMock(total_tokens=100),
+            )
+        )
 
         result = await filter_banter(segments, mock_gateway, model="test-model")
 

@@ -109,7 +109,10 @@ class LLMGateway:
             latency = time.monotonic() - start
 
             if result.returncode != 0:
-                error_msg = result.stderr.strip() or f"kimi exited with code {result.returncode}"
+                error_msg = (
+                    result.stderr.strip()
+                    or f"kimi exited with code {result.returncode}"
+                )
                 raise LLMGatewayError(f"Kimi CLI error: {error_msg}")
 
             content = result.stdout.strip()
@@ -120,7 +123,9 @@ class LLMGateway:
             response = LLMResponse(
                 content=content,
                 model=self.settings.kimi_model or "kimi-default",
-                usage=LLMUsage(prompt_tokens=0, completion_tokens=0),  # Kimi doesn't report usage
+                usage=LLMUsage(
+                    prompt_tokens=0, completion_tokens=0
+                ),  # Kimi doesn't report usage
             )
 
             logger.info(
@@ -141,7 +146,9 @@ class LLMGateway:
 
     async def _complete_nanogpt(self, request: LLMRequest) -> LLMResponse:
         """Send a completion request to the nano-gpt.com API with retries."""
-        assert self._client is not None, "HTTP client not initialized for nanogpt provider"
+        assert (
+            self._client is not None
+        ), "HTTP client not initialized for nanogpt provider"
 
         last_error: Exception | None = None
         backoff = 1.0
@@ -155,7 +162,11 @@ class LLMGateway:
                         "model": request.model,
                         "messages": request.messages,
                         "temperature": request.temperature,
-                        **({"max_tokens": request.max_tokens} if request.max_tokens else {}),
+                        **(
+                            {"max_tokens": request.max_tokens}
+                            if request.max_tokens
+                            else {}
+                        ),
                     },
                 )
                 latency = time.monotonic() - start
@@ -209,7 +220,7 @@ class LLMGateway:
             first_newline = text.find("\n")
             if first_newline == -1:
                 return text
-            text = text[first_newline + 1:]
+            text = text[first_newline + 1 :]
             if text.rstrip().endswith("```"):
                 text = text.rstrip().rsplit("```", 1)[0].strip()
         return text
@@ -227,7 +238,10 @@ class LLMGateway:
             parsed = json.loads(content)
             return output_type.model_validate(parsed)
         except (json.JSONDecodeError, ValidationError) as e:
-            logger.warning("Structured output parsing failed: %s. Retrying with correction.", str(e))
+            logger.warning(
+                "Structured output parsing failed: %s. Retrying with correction.",
+                str(e),
+            )
 
             corrective_messages = request.messages + [
                 {"role": "assistant", "content": response.content},

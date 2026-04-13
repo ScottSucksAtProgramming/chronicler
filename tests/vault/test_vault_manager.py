@@ -1,8 +1,7 @@
 """Tests for the Vault Manager."""
 
 import pytest
-import yaml
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 from chronicler.vault.vault_manager import VaultManager
 from chronicler.models.entities import (
     NPC,
@@ -25,7 +24,6 @@ from chronicler.models.context import (
     AgentMemory,
     PlayerCharacter,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -239,7 +237,9 @@ class TestWriteEntities:
         path_arg = mock_cli.create.call_args[0][0]
         assert path_arg == "Sessions/Session-001.md"
 
-    def test_write_extraction_result_updates_party_notes_from_session(self, manager, mock_cli):
+    def test_write_extraction_result_updates_party_notes_from_session(
+        self, manager, mock_cli
+    ):
         mock_cli.find_notes_in_folder.side_effect = lambda folder: {
             "Party/": ["Party/Celestine Silverleaf.md"],
             "NPCs/": [],
@@ -299,10 +299,15 @@ class TestWriteEntities:
         manager.write_extraction_result(result)
 
         updated_party_calls = [
-            call for call in mock_cli.create.call_args_list if call.args[0] == "Party/Celestine Silverleaf.md"
+            call
+            for call in mock_cli.create.call_args_list
+            if call.args[0] == "Party/Celestine Silverleaf.md"
         ]
         assert updated_party_calls
-        assert "[[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person." in updated_party_calls[-1].args[1]
+        assert (
+            "[[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person."
+            in updated_party_calls[-1].args[1]
+        )
 
     def test_write_npc_content_contains_frontmatter(self, manager, mock_cli):
         npc = _sample_npc()
@@ -404,7 +409,9 @@ class TestWriteExtractionResult:
         created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
         assert any("_Agent/Questions/" in p for p in created_paths)
 
-    def test_write_source_ingest_result_without_session_skips_session_note(self, manager, mock_cli):
+    def test_write_source_ingest_result_without_session_skips_session_note(
+        self, manager, mock_cli
+    ):
         result = KnowledgeIngestResult(
             session_number=None,
             npcs=[_sample_npc()],
@@ -422,7 +429,9 @@ class TestWriteExtractionResult:
         assert any("Locations/" in p for p in created_paths)
         assert not any("Sessions/" in p for p in created_paths)
 
-    def test_write_source_ingest_result_with_anchor_updates_session(self, manager, mock_cli):
+    def test_write_source_ingest_result_with_anchor_updates_session(
+        self, manager, mock_cli
+    ):
         result = KnowledgeIngestResult(
             session_number=22,
             npcs=[_sample_npc()],
@@ -438,7 +447,9 @@ class TestWriteExtractionResult:
         created_paths = [c.args[0] for c in mock_cli.create.call_args_list]
         assert any("Sessions/Session-022.md" == p for p in created_paths)
 
-    def test_write_source_ingest_result_updates_existing_location_additively(self, manager, mock_cli):
+    def test_write_source_ingest_result_updates_existing_location_additively(
+        self, manager, mock_cli
+    ):
         existing_note = (
             "---\n"
             "type: location\n"
@@ -477,14 +488,18 @@ class TestWriteExtractionResult:
 
         manager.write_source_ingest_result(result)
 
-        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        create_calls = {
+            call.args[0]: call.args[1] for call in mock_cli.create.call_args_list
+        }
         updated = create_calls["Locations/Laguna Nera.md"]
         assert "Original city summary." in updated
         assert "A labyrinthine city of canals and underworld intrigue." in updated
         assert "## Source Updates" not in updated
         assert "### Laguna Nera.md" not in updated
 
-    def test_write_source_ingest_result_updates_parent_location_with_contains_links(self, manager, mock_cli):
+    def test_write_source_ingest_result_updates_parent_location_with_contains_links(
+        self, manager, mock_cli
+    ):
         parent_note = (
             "---\n"
             "type: location\n"
@@ -505,7 +520,10 @@ class TestWriteExtractionResult:
         )
         mock_cli.find_notes_in_folder.side_effect = lambda folder: {
             "NPCs/": [],
-            "Locations/": ["Locations/Laguna Nera.md", "Locations/Silkmarket District.md"],
+            "Locations/": [
+                "Locations/Laguna Nera.md",
+                "Locations/Silkmarket District.md",
+            ],
             "Factions/": [],
         }.get(folder, [])
         mock_cli.read.side_effect = lambda path: {
@@ -534,7 +552,9 @@ class TestWriteExtractionResult:
 
         manager.write_source_ingest_result(result)
 
-        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        create_calls = {
+            call.args[0]: call.args[1] for call in mock_cli.create.call_args_list
+        }
         updated_child = create_calls["Locations/Silkmarket District.md"]
         updated_parent = create_calls["Locations/Laguna Nera.md"]
         assert "**Belongs To:** [[Laguna Nera]]" in updated_child
@@ -543,13 +563,11 @@ class TestWriteExtractionResult:
         assert "## Location Relationships" not in updated_child
         assert "## Location Relationships" not in updated_parent
 
-    def test_write_source_ingest_result_preserves_existing_child_links_on_parent(self, manager, mock_cli):
+    def test_write_source_ingest_result_preserves_existing_child_links_on_parent(
+        self, manager, mock_cli
+    ):
         parent_note = (
-            "---\n"
-            "type: location\n"
-            "name: Laguna Nera\n"
-            "---\n"
-            "# Laguna Nera\n"
+            "---\n" "type: location\n" "name: Laguna Nera\n" "---\n" "# Laguna Nera\n"
         )
         existing_child_note = (
             "---\n"
@@ -605,7 +623,9 @@ class TestWriteExtractionResult:
 
         manager.write_source_ingest_result(result)
 
-        create_calls = {call.args[0]: call.args[1] for call in mock_cli.create.call_args_list}
+        create_calls = {
+            call.args[0]: call.args[1] for call in mock_cli.create.call_args_list
+        }
         updated_parent = create_calls["Locations/Laguna Nera.md"]
         assert "[[Mist Alley]]" in updated_parent
         assert "[[Siren's Hollow]]" in updated_parent
@@ -662,7 +682,7 @@ class TestContextBundle:
         assert bundle.player_characters == []
 
     def test_vault_with_npcs_populates_known_npcs(self, manager, mock_cli):
-        npc_frontmatter = "---\ntype: npc\nname: Theron\nstatus: alive\naliases: [\"The Stranger\"]\n---\n# Theron"
+        npc_frontmatter = '---\ntype: npc\nname: Theron\nstatus: alive\naliases: ["The Stranger"]\n---\n# Theron'
         mock_cli.find_notes_in_folder.side_effect = lambda folder: {
             "NPCs/": ["NPCs/Theron.md"],
             "Locations/": [],
@@ -682,7 +702,7 @@ class TestContextBundle:
         assert "The Stranger" in bundle.known_npcs[0].aliases
 
     def test_vault_with_locations_populates_known_locations(self, manager, mock_cli):
-        loc_frontmatter = "---\ntype: location\nname: Thornwall\naliases: [\"The Wall\"]\n---\n# Thornwall"
+        loc_frontmatter = '---\ntype: location\nname: Thornwall\naliases: ["The Wall"]\n---\n# Thornwall'
         mock_cli.find_notes_in_folder.side_effect = lambda folder: {
             "NPCs/": [],
             "Locations/": ["Locations/Thornwall.md"],
@@ -717,7 +737,9 @@ class TestContextBundle:
         assert len(bundle.recent_events) >= 1
 
     def test_context_bundle_reads_entity_aliases(self, manager, mock_cli):
-        aliases_content = "---\ntype: agent-memory\n---\n\nTheron: The Stranger\nGarrick: Old Man G"
+        aliases_content = (
+            "---\ntype: agent-memory\n---\n\nTheron: The Stranger\nGarrick: Old Man G"
+        )
         mock_cli.find_notes_in_folder.side_effect = lambda folder: {
             "NPCs/": [],
             "Locations/": [],
@@ -786,7 +808,9 @@ class TestAgentMemory:
             if "player-characters" in path:
                 return "---\ntype: agent-memory\n---\n\n- player_name: Scott\n  character_name: Arin\n  character_class: Fighter"
             if "extraction-rules" in path:
-                return "---\ntype: agent-memory\n---\n\n- Always check for name variants"
+                return (
+                    "---\ntype: agent-memory\n---\n\n- Always check for name variants"
+                )
             if "campaign-patterns" in path:
                 return "---\ntype: agent-memory\n---\n\n- The party tends to split"
             if "user-preferences" in path:

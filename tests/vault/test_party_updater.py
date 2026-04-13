@@ -28,8 +28,14 @@ def test_party_note_backfills_timeline_and_relationships_from_sessions() -> None
 
     updated = update_party_note_from_sessions(note, pc, sessions)
 
-    assert "- [[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person." in updated
-    assert "- [[Session-003]]: [[Celestine Silverleaf]] argued with [[Denjin Karr]] about the chest" in updated
+    assert (
+        "- [[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person."
+        in updated
+    )
+    assert (
+        "- [[Session-003]]: [[Celestine Silverleaf]] argued with [[Denjin Karr]] about the chest"
+        in updated
+    )
     assert "- [[Denjin Karr]]" in updated
 
 
@@ -55,4 +61,9 @@ def test_party_note_updates_are_idempotent() -> None:
     once = update_party_note_from_sessions(note, pc, sessions)
     twice = update_party_note_from_sessions(once, pc, sessions)
 
-    assert twice.count("[[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person.") == 1
+    assert (
+        twice.count(
+            "[[Session-003]]: [[Celestine Silverleaf]] paralyzed the Oracle with Hold Person."
+        )
+        == 1
+    )

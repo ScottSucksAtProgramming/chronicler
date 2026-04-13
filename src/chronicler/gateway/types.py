@@ -1,6 +1,6 @@
 """Types for LLM Gateway requests and responses."""
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, computed_field
 
 
 class LLMUsage(BaseModel):

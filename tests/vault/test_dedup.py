@@ -1,6 +1,5 @@
 """Tests for entity deduplication logic."""
 
-import pytest
 from chronicler.vault.dedup import find_match, is_duplicate
 
 
@@ -18,7 +17,10 @@ class TestFindMatch:
             "The Friendly Face": ["the big guy", "friendly face"],
             "Sylvie": ["sylvie starwater"],
         }
-        assert find_match("the big guy", [], alias_map=existing_with_aliases) == "The Friendly Face"
+        assert (
+            find_match("the big guy", [], alias_map=existing_with_aliases)
+            == "The Friendly Face"
+        )
 
     def test_fuzzy_match(self):
         existing = ["Sylvie Starwater", "Bill Tidewater"]
@@ -42,4 +44,7 @@ class TestIsDuplicate:
 
     def test_duplicate_with_alias(self):
         aliases = {"The Friendly Face": ["the big guy"]}
-        assert is_duplicate("the big guy", ["The Friendly Face"], alias_map=aliases) is True
+        assert (
+            is_duplicate("the big guy", ["The Friendly Face"], alias_map=aliases)
+            is True
+        )

@@ -1,7 +1,5 @@
 """Tests for individual vault quality checks."""
 
-import pytest
-
 from chronicler.reviewer.checks import (
     check_broken_wikilinks,
     check_missing_fields,
@@ -161,8 +159,7 @@ class TestCheckInconsistencies:
     def test_valid_affiliation_no_finding(self):
         snapshot: VaultSnapshot = {
             "NPCs/Theron.md": (
-                "---\ntype: npc\n---\n# Theron\n\n"
-                "**Affiliations:** [[The Cult]]"
+                "---\ntype: npc\n---\n# Theron\n\n" "**Affiliations:** [[The Cult]]"
             ),
             "Factions/The Cult.md": "# The Cult",
         }

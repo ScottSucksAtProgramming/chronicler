@@ -7,7 +7,7 @@ import pytest
 from chronicler.vault.obsidian_cli import ObsidianCLI
 from chronicler.vault.vault_manager import VaultManager
 from chronicler.config.settings import Settings
-from chronicler.models.entities import NPC, Location, EntityStatus
+from chronicler.models.entities import NPC, EntityStatus
 
 
 @pytest.mark.integration
@@ -26,7 +26,11 @@ class TestMultiSessionPipeline:
 
     def test_second_write_does_not_duplicate_npcs(self, real_manager, real_cli):
         """An NPC written twice should have one note, not two."""
-        npc = NPC(name="Dedup Test NPC", first_appeared="Session-001", status=EntityStatus.ALIVE)
+        npc = NPC(
+            name="Dedup Test NPC",
+            first_appeared="Session-001",
+            status=EntityStatus.ALIVE,
+        )
 
         real_manager.write_npc(npc)
         real_manager.write_npc(npc)  # second write should be skipped

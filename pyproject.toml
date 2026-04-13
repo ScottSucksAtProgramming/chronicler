@@ -59,6 +59,9 @@ markers = [
     "integration: marks tests that require external services (run with '-m integration')",
 ]
 
+[tool.black]
+target-version = ["py312"]
+
 [dependency-groups]
 dev = [
     "black>=25.0",

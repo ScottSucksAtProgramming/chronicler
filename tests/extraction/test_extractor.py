@@ -9,165 +9,180 @@ from chronicler.extraction.extractor import extract_session
 from chronicler.models.session import NormalizedSession, TranscriptSegment
 from chronicler.models.context import ContextBundle
 from chronicler.models.extraction import ExtractionResult, KnowledgeIngestResult
-from chronicler.models.source_document import SourceClassification, SourceDocument, DocumentType
+from chronicler.models.source_document import (
+    SourceClassification,
+    SourceDocument,
+    DocumentType,
+)
 from chronicler.extraction.source_extractor import extract_source_document
 
+MOCK_EXTRACTION_RESPONSE = json.dumps(
+    {
+        "npcs": [
+            {
+                "name": "Theron",
+                "first_appeared": "Session-001",
+                "status": "alive",
+                "description": "A ranger from the north.",
+                "aliases": [],
+                "affiliations": [],
+                "tags": ["ranger"],
+                "key_interactions": ["Met the party in the forest"],
+            }
+        ],
+        "locations": [
+            {
+                "name": "The Dark Forest",
+                "first_appeared": "Session-001",
+                "description": "A dense forest.",
+                "aliases": ["dark forest"],
+                "connected_to": [],
+                "tags": [],
+            }
+        ],
+        "factions": [],
+        "loot": [],
+        "plot_threads": [
+            {
+                "title": "Missing Merchant",
+                "status": "open",
+                "introduced_in": "Session-001",
+                "summary": "A merchant went missing in the forest.",
+            }
+        ],
+        "questions": [],
+    }
+)
 
-MOCK_EXTRACTION_RESPONSE = json.dumps({
-    "npcs": [
-        {
-            "name": "Theron",
-            "first_appeared": "Session-001",
-            "status": "alive",
-            "description": "A ranger from the north.",
-            "aliases": [],
-            "affiliations": [],
-            "tags": ["ranger"],
-            "key_interactions": ["Met the party in the forest"],
-        }
-    ],
-    "locations": [
-        {
-            "name": "The Dark Forest",
-            "first_appeared": "Session-001",
-            "description": "A dense forest.",
-            "aliases": ["dark forest"],
-            "connected_to": [],
-            "tags": [],
-        }
-    ],
-    "factions": [],
-    "loot": [],
-    "plot_threads": [
-        {
-            "title": "Missing Merchant",
-            "status": "open",
-            "introduced_in": "Session-001",
-            "summary": "A merchant went missing in the forest.",
-        }
-    ],
-    "questions": [],
-})
+MOCK_RECAP_RESPONSE = json.dumps(
+    {
+        "title": "Into the Dark Forest",
+        "summary": "The party ventured into the forest and met Theron.",
+        "key_events": [
+            {"description": "Met Theron the ranger", "timestamp": "00:15:00"},
+        ],
+    }
+)
 
-MOCK_RECAP_RESPONSE = json.dumps({
-    "title": "Into the Dark Forest",
-    "summary": "The party ventured into the forest and met Theron.",
-    "key_events": [
-        {"description": "Met Theron the ranger", "timestamp": "00:15:00"},
-    ],
-})
+MOCK_QUALITY_RESPONSE = json.dumps(
+    {
+        "completeness": 4,
+        "accuracy": 5,
+        "coherence": 4,
+        "relevance": 5,
+        "linking_quality": 4,
+        "notes": "Good extraction.",
+    }
+)
 
-MOCK_QUALITY_RESPONSE = json.dumps({
-    "completeness": 4,
-    "accuracy": 5,
-    "coherence": 4,
-    "relevance": 5,
-    "linking_quality": 4,
-    "notes": "Good extraction.",
-})
+MOCK_SOURCE_EXTRACTION_RESPONSE = json.dumps(
+    {
+        "npcs": [
+            {
+                "name": "Theron",
+                "first_appeared": None,
+                "source_attribution": "DM Jared notes",
+                "status": "alive",
+                "description": "A ranger from the north.",
+                "aliases": [],
+                "affiliations": [],
+                "tags": ["ranger"],
+                "key_interactions": ["Mentioned in old campaign notes"],
+            }
+        ],
+        "locations": [
+            {
+                "name": "The Dark Forest",
+                "first_appeared": None,
+                "source_attribution": "DM Jared notes",
+                "description": "A dense forest.",
+                "aliases": ["dark forest"],
+                "parent_location": "Northern Reach",
+                "adjacent_to": ["Hunter's Road"],
+                "connected_to": [],
+                "tags": [],
+            }
+        ],
+        "factions": [],
+        "loot": [],
+        "plot_threads": [
+            {
+                "title": "Missing Merchant",
+                "status": "open",
+                "introduced_in": None,
+                "source_attribution": "DM Jared notes",
+                "summary": "A merchant went missing in the forest.",
+            }
+        ],
+        "questions": [],
+    }
+)
 
-MOCK_SOURCE_EXTRACTION_RESPONSE = json.dumps({
-    "npcs": [
-        {
-            "name": "Theron",
-            "first_appeared": None,
-            "source_attribution": "DM Jared notes",
-            "status": "alive",
-            "description": "A ranger from the north.",
-            "aliases": [],
-            "affiliations": [],
-            "tags": ["ranger"],
-            "key_interactions": ["Mentioned in old campaign notes"],
-        }
-    ],
-    "locations": [
-        {
-            "name": "The Dark Forest",
-            "first_appeared": None,
-            "source_attribution": "DM Jared notes",
-            "description": "A dense forest.",
-            "aliases": ["dark forest"],
-            "parent_location": "Northern Reach",
-            "adjacent_to": ["Hunter's Road"],
-            "connected_to": [],
-            "tags": [],
-        }
-    ],
-    "factions": [],
-    "loot": [],
-    "plot_threads": [
-        {
-            "title": "Missing Merchant",
-            "status": "open",
-            "introduced_in": None,
-            "source_attribution": "DM Jared notes",
-            "summary": "A merchant went missing in the forest.",
-        }
-    ],
-    "questions": [],
-})
+MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE = json.dumps(
+    {
+        "npcs": [
+            {
+                "name": "Theron",
+                "first_appeared": None,
+                "source_attribution": None,
+                "status": "alive",
+                "description": "A ranger from the north.",
+                "aliases": [],
+                "affiliations": [],
+                "tags": ["ranger"],
+                "key_interactions": ["Mentioned in old campaign notes"],
+            }
+        ],
+        "locations": [
+            {
+                "name": "The Dark Forest",
+                "first_appeared": None,
+                "source_attribution": None,
+                "description": "A dense forest.",
+                "aliases": ["dark forest"],
+                "parent_location": None,
+                "adjacent_to": [],
+                "connected_to": [],
+                "tags": [],
+            }
+        ],
+        "factions": [],
+        "loot": [],
+        "plot_threads": [
+            {
+                "title": "Missing Merchant",
+                "status": "open",
+                "introduced_in": None,
+                "source_attribution": None,
+                "summary": "A merchant went missing in the forest.",
+            }
+        ],
+        "questions": [],
+    }
+)
 
-MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE = json.dumps({
-    "npcs": [
-        {
-            "name": "Theron",
-            "first_appeared": None,
-            "source_attribution": None,
-            "status": "alive",
-            "description": "A ranger from the north.",
-            "aliases": [],
-            "affiliations": [],
-            "tags": ["ranger"],
-            "key_interactions": ["Mentioned in old campaign notes"],
-        }
-    ],
-    "locations": [
-        {
-            "name": "The Dark Forest",
-            "first_appeared": None,
-            "source_attribution": None,
-            "description": "A dense forest.",
-            "aliases": ["dark forest"],
-            "parent_location": None,
-            "adjacent_to": [],
-            "connected_to": [],
-            "tags": [],
-        }
-    ],
-    "factions": [],
-    "loot": [],
-    "plot_threads": [
-        {
-            "title": "Missing Merchant",
-            "status": "open",
-            "introduced_in": None,
-            "source_attribution": None,
-            "summary": "A merchant went missing in the forest.",
-        }
-    ],
-    "questions": [],
-})
-
-MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE = json.dumps({
-    "npcs": [],
-    "locations": [
-        {
-            "name": "Mist Alley",
-            "first_appeared": None,
-            "source_attribution": "DM Jared notes",
-            "description": "A district in Laguna Nera containing the Perfumed Chapel and Redcap's Remedies.",
-            "aliases": [],
-            "parent_location": None,
-            "adjacent_to": [],
-            "connected_to": ["Laguna Nera"],
-            "tags": ["district"],
-        }
-    ],
-    "factions": [],
-    "loot": [],
-    "plot_threads": [],
-    "questions": [],
-})
+MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE = json.dumps(
+    {
+        "npcs": [],
+        "locations": [
+            {
+                "name": "Mist Alley",
+                "first_appeared": None,
+                "source_attribution": "DM Jared notes",
+                "description": "A district in Laguna Nera containing the Perfumed Chapel and Redcap's Remedies.",
+                "aliases": [],
+                "parent_location": None,
+                "adjacent_to": [],
+                "connected_to": ["Laguna Nera"],
+                "tags": ["district"],
+            }
+        ],
+        "factions": [],
+        "loot": [],
+        "plot_threads": [],
+        "questions": [],
+    }
+)
 
 
 @pytest.fixture
@@ -177,7 +192,9 @@ def sample_session():
         title="Test Session",
         summary_text="The party went into the dark forest and met Theron the ranger.",
         transcript_segments=[
-            TranscriptSegment(timestamp="00:15:00", text="You see a ranger ahead.", is_in_game=True),
+            TranscriptSegment(
+                timestamp="00:15:00", text="You see a ranger ahead.", is_in_game=True
+            ),
         ],
     )
 
@@ -187,7 +204,9 @@ def mock_gateway():
     gateway = MagicMock()
     gateway.complete = AsyncMock(
         side_effect=[
-            MagicMock(content=MOCK_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)),
+            MagicMock(
+                content=MOCK_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)
+            ),
             MagicMock(content=MOCK_RECAP_RESPONSE, usage=MagicMock(total_tokens=200)),
             MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
         ]
@@ -253,8 +272,13 @@ class TestExtractSourceDocument:
         gateway = MagicMock()
         gateway.complete = AsyncMock(
             side_effect=[
-                MagicMock(content=MOCK_SOURCE_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)),
-                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+                MagicMock(
+                    content=MOCK_SOURCE_EXTRACTION_RESPONSE,
+                    usage=MagicMock(total_tokens=500),
+                ),
+                MagicMock(
+                    content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)
+                ),
             ]
         )
         source_document = SourceDocument(
@@ -291,9 +315,15 @@ class TestExtractSourceDocument:
         gateway = MagicMock()
         gateway.complete = AsyncMock(
             side_effect=[
-                MagicMock(content=MOCK_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)),
-                MagicMock(content=MOCK_RECAP_RESPONSE, usage=MagicMock(total_tokens=200)),
-                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+                MagicMock(
+                    content=MOCK_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)
+                ),
+                MagicMock(
+                    content=MOCK_RECAP_RESPONSE, usage=MagicMock(total_tokens=200)
+                ),
+                MagicMock(
+                    content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)
+                ),
             ]
         )
         source_document = SourceDocument(
@@ -320,13 +350,20 @@ class TestExtractSourceDocument:
         assert result.recap.title == "Into the Dark Forest"
 
     @pytest.mark.asyncio
-    async def test_extract_source_emits_question_when_provenance_needed_but_missing(self):
+    async def test_extract_source_emits_question_when_provenance_needed_but_missing(
+        self,
+    ):
         context = ContextBundle(session_number=0)
         gateway = MagicMock()
         gateway.complete = AsyncMock(
             side_effect=[
-                MagicMock(content=MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE, usage=MagicMock(total_tokens=500)),
-                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+                MagicMock(
+                    content=MOCK_SOURCE_EXTRACTION_NO_PROVENANCE_RESPONSE,
+                    usage=MagicMock(total_tokens=500),
+                ),
+                MagicMock(
+                    content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)
+                ),
             ]
         )
         source_document = SourceDocument(
@@ -352,13 +389,20 @@ class TestExtractSourceDocument:
         assert result.npcs[0].source_attribution == "Imported source: legacy_note.md"
 
     @pytest.mark.asyncio
-    async def test_extract_source_prompt_requests_questions_for_uncertain_geography(self):
+    async def test_extract_source_prompt_requests_questions_for_uncertain_geography(
+        self,
+    ):
         context = ContextBundle(session_number=0)
         gateway = MagicMock()
         gateway.complete = AsyncMock(
             side_effect=[
-                MagicMock(content=MOCK_SOURCE_EXTRACTION_RESPONSE, usage=MagicMock(total_tokens=500)),
-                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+                MagicMock(
+                    content=MOCK_SOURCE_EXTRACTION_RESPONSE,
+                    usage=MagicMock(total_tokens=500),
+                ),
+                MagicMock(
+                    content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)
+                ),
             ]
         )
         source_document = SourceDocument(
@@ -385,13 +429,20 @@ class TestExtractSourceDocument:
         assert "unclear geography" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_extract_source_infers_parent_location_from_explicit_description(self):
+    async def test_extract_source_infers_parent_location_from_explicit_description(
+        self,
+    ):
         context = ContextBundle(session_number=0)
         gateway = MagicMock()
         gateway.complete = AsyncMock(
             side_effect=[
-                MagicMock(content=MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE, usage=MagicMock(total_tokens=500)),
-                MagicMock(content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)),
+                MagicMock(
+                    content=MOCK_SOURCE_EXTRACTION_WITH_IMPLICIT_PARENT_RESPONSE,
+                    usage=MagicMock(total_tokens=500),
+                ),
+                MagicMock(
+                    content=MOCK_QUALITY_RESPONSE, usage=MagicMock(total_tokens=100)
+                ),
             ]
         )
         source_document = SourceDocument(

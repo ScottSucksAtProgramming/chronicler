@@ -7,8 +7,8 @@ from chronicler.models.extraction import (
     QuestionPriority,
     QualityScore,
 )
-from chronicler.models.entities import NPC, Location, Faction, LootItem, PlotThread, ThreadStatus
-from chronicler.models.session import SessionRecap, KeyEvent
+from chronicler.models.entities import NPC, Location, PlotThread, ThreadStatus
+from chronicler.models.session import SessionRecap
 
 
 class TestExtractionResult:
@@ -100,7 +100,11 @@ class TestQualityScore:
 
     def test_quality_score_rejects_out_of_range(self):
         with pytest.raises(Exception):
-            QualityScore(completeness=0, accuracy=5, coherence=5, relevance=5, linking_quality=5)
+            QualityScore(
+                completeness=0, accuracy=5, coherence=5, relevance=5, linking_quality=5
+            )
 
         with pytest.raises(Exception):
-            QualityScore(completeness=6, accuracy=5, coherence=5, relevance=5, linking_quality=5)
+            QualityScore(
+                completeness=6, accuracy=5, coherence=5, relevance=5, linking_quality=5
+            )

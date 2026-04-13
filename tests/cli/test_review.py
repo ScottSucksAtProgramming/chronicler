@@ -1,5 +1,5 @@
 """Tests for the review CLI command."""
-import pytest
+
 from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
 from chronicler.cli.main import app
@@ -20,9 +20,11 @@ class TestReviewCommand:
         mock_report.warning_count = 0
         mock_report.info_count = 0
 
-        with patch("chronicler.cli.main.Settings") as MockSettings, \
-             patch("chronicler.cli.main.ObsidianCLI"), \
-             patch("chronicler.cli.main.review_vault", return_value=mock_report):
+        with (
+            patch("chronicler.cli.main.Settings") as MockSettings,
+            patch("chronicler.cli.main.ObsidianCLI"),
+            patch("chronicler.cli.main.review_vault", return_value=mock_report),
+        ):
             MockSettings.return_value = MagicMock(vault_name="Test")
             result = runner.invoke(app, ["review"])
             assert result.exit_code == 0

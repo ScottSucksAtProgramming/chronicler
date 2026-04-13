@@ -18,7 +18,9 @@ from chronicler.gateway.llm_gateway import LLMGateway
 from chronicler.config.settings import Settings
 
 
-def _precision_recall(extracted_names: set[str], expected_names: set[str]) -> tuple[float, float]:
+def _precision_recall(
+    extracted_names: set[str], expected_names: set[str]
+) -> tuple[float, float]:
     """Compute precision and recall between extracted and expected name sets.
     Uses lowercased comparison for fuzzy matching.
     """
@@ -83,9 +85,7 @@ class TestGoldenEval:
     def _get_result(self, session_022_dir):
         """Get or compute the extraction result (cached)."""
         if "result" not in _extraction_cache:
-            _extraction_cache["result"] = asyncio.run(
-                _run_extraction(session_022_dir)
-            )
+            _extraction_cache["result"] = asyncio.run(_run_extraction(session_022_dir))
         return _extraction_cache["result"]
 
     def test_extraction_npc_recall(self, session_022_dir, session_022_golden):
@@ -124,6 +124,6 @@ class TestGoldenEval:
         result = self._get_result(session_022_dir)
         if result.quality_score:
             print(f"\nQuality: {result.quality_score.model_dump()}")
-            assert not result.quality_score.has_failures, (
-                f"Quality failures: {result.quality_score.failed_dimensions}"
-            )
+            assert (
+                not result.quality_score.has_failures
+            ), f"Quality failures: {result.quality_score.failed_dimensions}"

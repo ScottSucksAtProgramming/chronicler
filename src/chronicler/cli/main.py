@@ -11,7 +11,11 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
-from chronicler.config.files import get_field_sources, load_config_file, write_config_file
+from chronicler.config.files import (
+    get_field_sources,
+    load_config_file,
+    write_config_file,
+)
 from chronicler.config.paths import get_config_path
 from chronicler.config.settings import Settings
 from chronicler.extraction.source_extractor import extract_source_document
@@ -991,10 +995,14 @@ def config_init() -> None:
         existing.get("nanogpt_model", Settings.model_fields["nanogpt_model"].default)
     )
     lm_studio_base_url_default = str(
-        existing.get("lm_studio_base_url", Settings.model_fields["lm_studio_base_url"].default)
+        existing.get(
+            "lm_studio_base_url", Settings.model_fields["lm_studio_base_url"].default
+        )
     )
     embedding_model_default = str(
-        existing.get("embedding_model", Settings.model_fields["embedding_model"].default)
+        existing.get(
+            "embedding_model", Settings.model_fields["embedding_model"].default
+        )
     )
     log_level_default = str(
         existing.get("log_level", Settings.model_fields["log_level"].default)
@@ -1064,7 +1072,9 @@ def config_init() -> None:
         "  Embedding model:  "
         f"{config_values.get('embedding_model', embedding_model_default)}"
     )
-    console.print(f"  Log level:        {config_values.get('log_level', log_level_default)}")
+    console.print(
+        f"  Log level:        {config_values.get('log_level', log_level_default)}"
+    )
 
     if not typer.confirm("Write this configuration?", default=True):
         console.print("Aborted.")

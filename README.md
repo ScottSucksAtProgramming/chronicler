@@ -15,7 +15,7 @@ linked notes you can actually use at the table.
 ## Install
 
 ```bash
-pip install chronicler-ttrpg
+uv tool install chronicler-ttrpg
 ```
 
 Then run the setup wizard:

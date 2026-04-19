@@ -22,20 +22,7 @@ Install each of the following before proceeding:
 
 ## Install Chronicler
 
-```bash
-pip install chronicler-ttrpg
-```
-
-Verify the CLI is available:
-
-```bash
-chronicler --help
-```
-
-## Global Tool Install (alternative)
-
-If you use `uv` and want `chronicler` available system-wide without activating
-a virtual environment:
+The recommended way to install Chronicler is as a global tool via `uv`:
 
 ```bash
 uv tool install chronicler-ttrpg
@@ -46,6 +33,26 @@ To update later:
 ```bash
 uv tool upgrade chronicler-ttrpg
 ```
+
+Verify the CLI is available:
+
+```bash
+chronicler --help
+```
+
+## Install via pip (alternative)
+
+If you prefer pip, install into a virtual environment — modern macOS blocks
+system-wide pip installs by default:
+
+```bash
+python3 -m venv ~/.venv/chronicler
+source ~/.venv/chronicler/bin/activate
+pip install chronicler-ttrpg
+```
+
+You will need to activate the virtual environment each time before running
+`chronicler`, or add the venv's `bin/` directory to your `PATH`.
 
 ## Configure
 

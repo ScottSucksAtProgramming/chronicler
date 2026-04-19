@@ -129,6 +129,8 @@ Recommended first-run flow:
 6. Run `chronicler review` and `chronicler ask`.
 7. Open `chronicler chat` after the vault has been indexed.
 
+Optional: run `chronicler improve` at any time for periodic vault maintenance.
+
 ### 1. Initialize the Vault
 
 ```bash
@@ -252,6 +254,10 @@ Processes one or more `.pdf` and `.txt` session files.
 ### `chronicler review`
 
 Runs consistency checks over the vault and logs findings.
+
+### `chronicler improve`
+
+Runs deterministic vault maintenance and queues questions for ambiguous notes.
 
 ### `chronicler ask`
 

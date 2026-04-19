@@ -31,7 +31,7 @@ with release history organized by project milestone.
 
 #### Added
 
-- PLAUD PDF and transcript parsers for session source material.
+- Session PDF and transcript parsers for source material.
 - LLM-assisted banter filtering and session normalization.
 - Extraction prompts, orchestration, and golden-fixture evaluation coverage.
 - CLI ingest wiring for end-to-end extraction from session files.

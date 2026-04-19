@@ -7,18 +7,22 @@ AI agent that ingests session recordings and general source materials, extracts 
 ## Tree
 
 ```
-dnd_notes_organizaer/
+chronicler/
   CLAUDE.md
   INDEX.md
   prd.md
   pyproject.toml
   .env.example
+  todo.taskpaper
+  plans/
+    m1-documentation-polish.md  — implementation plan for M1 documentation polish
+    m2-documentation-restructure.md — implementation plan for M2 documentation restructure
   src/
     chronicler/
       __init__.py
       py.typed
       cli/
-        main.py          — typer CLI entry point (ingest, chat, review, ask, config, reindex, stats)
+        main.py          — typer CLI entry point (ingest, chat, review, improve, ask, config, reindex, stats, party)
       models/
         __init__.py      — public exports for all 15+ Pydantic models
         entities.py      — NPC, Location, Faction, LootItem, PlotThread

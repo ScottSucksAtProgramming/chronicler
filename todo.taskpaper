@@ -1,0 +1,51 @@
+Chronicler Release:
+
+	M1 - Documentation Polish: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/1) @done(2026-04-19)
+		- Fix README clone URL: replace `<your-remote-url>` with `https://github.com/ScottSucksAtProgramming/chronicler` @done(2026-04-19)
+		- Add `chronicler improve` entry to the Command Reference section of README @done(2026-04-19)
+		- Add `chronicler improve` to the recommended workflow in the Getting Started section @done(2026-04-19)
+		- Update `chronicler ingest` description in README to mention it accepts general source material (markdown, plain text, PDFs), not only PLAUD session exports @done(2026-04-19)
+		- Add a prominent macOS-only notice to the Prerequisites section of README (Obsidian binary path is currently hardcoded to /Applications/Obsidian.app) @done(2026-04-19)
+
+	M2 - Documentation Restructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/2) @plan(plans/m2-documentation-restructure.md)
+		- Convert docs/future-improvements.md items to GitHub issues, then delete the file @na
+		- Move prd-github-release.md to docs/superpowers/ @na
+		- Move prd-config-file-migration.md to docs/superpowers/ @na
+		- Move plans/github-public-release.md to docs/superpowers/plans/ @na
+		- Move plans/config-file-migration.md to docs/superpowers/plans/ @na
+		- Move docs/interview-notes.md to docs/superpowers/ @na
+		- Remove the PLAUD mention from CHANGELOG.md Milestone 2 entry @na
+		- Create SECURITY.md with GitHub private vulnerability reporting instructions @na
+		- Create docs/installation.md: prerequisites, pip install, config wizard walkthrough, verification @na
+		- Create docs/quick-start.md: first-run flow from config init through first ingest @na
+		- Create docs/commands.md: full command reference with flags and examples @na
+		- Create docs/configuration.md: all settings, required vs optional, env vars vs config file @na
+		- Create docs/workflows.md: backlog processing, active campaign, and knowledge import workflows @na
+		- Create docs/troubleshooting.md: pre-flight checklist and errors by category @na
+		- Create docs/development.md: dev env setup, running tests, linting @na
+		- Rewrite README.md: AI agent framing, pip install, quick-start summary, links to docs (~80 lines) @na
+		- Update INDEX.md to reflect new docs structure @na
+		- Update CLAUDE.md tree to reflect all new, moved, and deleted files @na
+
+	M3 - CLI Help Text:
+		- Update `ingest` command docstring in src/chronicler/cli/main.py from "Ingest PLAUD session files into the campaign vault" to cover general source material @na
+		- Update `ingest` FILES argument help text in src/chronicler/cli/main.py from "PLAUD PDF summary and/or transcript .txt files" to describe all accepted formats (PDF, .txt, .md) @na
+
+	M4 - Release Infrastructure:
+		- Verify that the `chronicler` package name is unclaimed on pypi.org before attempting to publish @na
+		- Decide on the release version: ship as 1.0.0 (stable) or use a pre-release tag like 1.0.0b1 or 0.1.0 to set expectations while the tool is macOS-only @na
+		- Update `version` in pyproject.toml and regenerate uv.lock if the version is changed from 1.0.0
+		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` workflow on pypi.org @na
+		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` workflow on test.pypi.org
+		- Temporarily add `repository-url: https://test.pypi.org/legacy/` to the publish step in .github/workflows/ci.yml to redirect to TestPyPI
+		- Commit the temporary TestPyPI ci.yml change and push a pre-release tag (e.g. v1.0.0b1) to trigger the CI publish job
+		- Verify the package installs cleanly from TestPyPI: `pip install --index-url https://test.pypi.org/simple/ chronicler`
+		- Remove the TestPyPI `repository-url` line from .github/workflows/ci.yml, restoring the production PyPI target
+		- Commit and push the restored ci.yml
+
+	M5 - Ship It:
+		- Push the final release tag (e.g. v1.0.0) to main to trigger the production PyPI publish job
+		- Verify the PyPI badge in README resolves to the published version at pypi.org/project/chronicler
+		- Verify `pip install chronicler` installs successfully and `chronicler --help` works
+
+	Archive:

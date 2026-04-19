@@ -73,6 +73,7 @@ Quick reference for the repository.
 | File | Purpose |
 |------|---------|
 | `prd.md` | Original project requirements draft |
+| `plans/` | Active implementation plans (feature milestones linked to GitHub issues) |
 | `docs/superpowers/plans/` | Milestone implementation plans from earlier development phases |
 | `docs/superpowers/plans/2026-04-02-milestone-1-foundation.md` | Early milestone implementation record |
 | `docs/superpowers/plans/2026-04-02-milestone-2-ingestion-extraction.md` | Early ingestion/extraction implementation record |

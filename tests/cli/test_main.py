@@ -20,6 +20,13 @@ class TestCLI:
         assert "config" in result.output
         assert "reindex" in result.output
 
+    def test_help_describes_ingest_as_session_recordings_and_source_materials(self):
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        assert "session recordings" in result.output
+        assert "source materials" in result.output
+        assert "PLAUD" not in result.output
+
     def test_version(self):
         result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0

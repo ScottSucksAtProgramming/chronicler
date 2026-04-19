@@ -81,12 +81,14 @@ chronicler/
         2026-04-02-session-scribe-design.md
         2026-04-02-chronicler-rename-and-docs-design.md
         2026-04-03-knowledge-source-ingest-design.md
+        2026-04-19-cli-help-text-m3.md
       plans/
         2026-04-02-milestone-1-foundation.md
         2026-04-02-chronicler-rename-and-docs.md
         2026-04-03-knowledge-source-ingest.md
         m1-documentation-polish.md
         m2-documentation-restructure.md
+        m3-cli-help-text.md
   context/
     conventions.md
     lessons.md

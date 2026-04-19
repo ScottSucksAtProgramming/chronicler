@@ -386,7 +386,7 @@ def ingest(
     files: Annotated[
         list[Path],
         typer.Argument(
-            help="PLAUD PDF summary and/or transcript .txt files to ingest."
+            help="Source files to ingest. Accepts .pdf, .txt, and .md."
         ),
     ],
     session_number: Annotated[
@@ -396,7 +396,7 @@ def ingest(
         ),
     ] = None,
 ) -> None:
-    """Ingest PLAUD session files into the campaign vault."""
+    """Ingest session recordings and source materials into the campaign vault."""
     # --- Validate files ---
     console.print(f"[bold]Ingesting {len(files)} file(s)...[/bold]")
     for f in files:

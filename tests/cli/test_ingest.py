@@ -19,7 +19,11 @@ class TestIngestCommand:
 
     def test_ingest_shows_help_for_file_types(self):
         result = runner.invoke(app, ["ingest", "--help"])
-        assert "pdf" in result.output.lower() or "PLAUD" in result.output
+        assert result.exit_code == 0
+        assert ".pdf" in result.output
+        assert ".txt" in result.output
+        assert ".md" in result.output
+        assert "PLAUD" not in result.output
 
     def test_ingest_rejects_unsupported_file_type(self, tmp_path):
         bad_file = tmp_path / "session.docx"

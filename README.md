@@ -7,6 +7,8 @@
 
 Chronicler is a local-first CLI for turning tabletop RPG session exports into an Obsidian campaign vault. It ingests PLAUD summary PDFs and transcript text files, extracts campaign entities with an LLM, writes linked notes into your vault, builds a local retrieval index, and gives you a chat interface over your campaign history.
 
+> **Platform support:** Chronicler currently requires macOS. The Obsidian CLI integration depends on the macOS desktop app binary. Linux and Windows are not yet supported.
+
 ## What It Does
 
 - Initializes a structured Obsidian vault for campaign notes
@@ -35,7 +37,7 @@ You need the following installed before using Chronicler:
 
 - Python 3.12+
 - `uv`
-- Obsidian desktop with CLI support enabled
+- Obsidian desktop with CLI support enabled (macOS only)
 - A local Obsidian vault for your campaign
 - One LLM provider:
   - Kimi CLI
@@ -51,7 +53,7 @@ Important current constraint:
 Clone the repo and install dependencies:
 
 ```bash
-git clone <your-remote-url> chronicler
+git clone https://github.com/ScottSucksAtProgramming/chronicler chronicler
 cd chronicler
 uv sync
 ```

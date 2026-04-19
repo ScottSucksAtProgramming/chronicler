@@ -89,6 +89,7 @@ chronicler/
         m1-documentation-polish.md
         m2-documentation-restructure.md
         m3-cli-help-text.md
+        m4-release-infrastructure.md
   context/
     conventions.md
     lessons.md

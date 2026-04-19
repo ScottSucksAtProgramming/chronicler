@@ -31,21 +31,23 @@ Chronicler Release:
 		- Update `ingest` command docstring in src/chronicler/cli/main.py from "Ingest PLAUD session files into the campaign vault" to cover general source material @done(2026-04-19)
 		- Update `ingest` FILES argument help text in src/chronicler/cli/main.py from "PLAUD PDF summary and/or transcript .txt files" to describe all accepted formats (PDF, .txt, .md) @done(2026-04-19)
 
-	M4 - Release Infrastructure:
-		- Verify that the `chronicler` package name is unclaimed on pypi.org before attempting to publish @na
-		- Decide on the release version: ship as 1.0.0 (stable) or use a pre-release tag like 1.0.0b1 or 0.1.0 to set expectations while the tool is macOS-only @na
-		- Update `version` in pyproject.toml and regenerate uv.lock if the version is changed from 1.0.0
-		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` workflow on pypi.org @na
-		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` workflow on test.pypi.org
+	M4 - Release Infrastructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/8)
+		- Rename package to `chronicler-ttrpg` in pyproject.toml (name `chronicler` is taken on PyPI) @done(2026-04-19)
+		- Set version to `0.1.0` in pyproject.toml (down from 1.0.0; macOS-only warrants pre-1.0 signal) @done(2026-04-19)
+		- Regenerate uv.lock after pyproject.toml changes @done(2026-04-19)
+		- Update install instructions in README.md and docs/ to use `pip install chronicler-ttrpg` @done(2026-04-19)
+		- Update PyPI badge URLs in README.md to reference `chronicler-ttrpg` @done(2026-04-19)
+		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on test.pypi.org
 		- Temporarily add `repository-url: https://test.pypi.org/legacy/` to the publish step in .github/workflows/ci.yml to redirect to TestPyPI
-		- Commit the temporary TestPyPI ci.yml change and push a pre-release tag (e.g. v1.0.0b1) to trigger the CI publish job
-		- Verify the package installs cleanly from TestPyPI: `pip install --index-url https://test.pypi.org/simple/ chronicler`
+		- Commit the temporary TestPyPI ci.yml change and push pre-release tag `v0.1.0b1` to trigger the CI publish job
+		- Verify the package installs cleanly from TestPyPI: `pip install --index-url https://test.pypi.org/simple/ chronicler-ttrpg`
+		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on pypi.org
 		- Remove the TestPyPI `repository-url` line from .github/workflows/ci.yml, restoring the production PyPI target
 		- Commit and push the restored ci.yml
 
 	M5 - Ship It:
-		- Push the final release tag (e.g. v1.0.0) to main to trigger the production PyPI publish job
-		- Verify the PyPI badge in README resolves to the published version at pypi.org/project/chronicler
-		- Verify `pip install chronicler` installs successfully and `chronicler --help` works
+		- Push the final release tag `v0.1.0` to main to trigger the production PyPI publish job
+		- Verify the PyPI badge in README resolves to the published version at pypi.org/project/chronicler-ttrpg
+		- Verify `pip install chronicler-ttrpg` installs successfully and `chronicler --help` works
 
 	Archive:

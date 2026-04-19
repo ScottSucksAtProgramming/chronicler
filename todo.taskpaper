@@ -7,25 +7,25 @@ Chronicler Release:
 		- Update `chronicler ingest` description in README to mention it accepts general source material (markdown, plain text, PDFs), not only PLAUD session exports @done(2026-04-19)
 		- Add a prominent macOS-only notice to the Prerequisites section of README (Obsidian binary path is currently hardcoded to /Applications/Obsidian.app) @done(2026-04-19)
 
-	M2 - Documentation Restructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/2) @plan(plans/m2-documentation-restructure.md)
-		- Convert docs/future-improvements.md items to GitHub issues, then delete the file @na
-		- Move prd-github-release.md to docs/superpowers/ @na
-		- Move prd-config-file-migration.md to docs/superpowers/ @na
-		- Move plans/github-public-release.md to docs/superpowers/plans/ @na
-		- Move plans/config-file-migration.md to docs/superpowers/plans/ @na
-		- Move docs/interview-notes.md to docs/superpowers/ @na
-		- Remove the PLAUD mention from CHANGELOG.md Milestone 2 entry @na
-		- Create SECURITY.md with GitHub private vulnerability reporting instructions @na
-		- Create docs/installation.md: prerequisites, pip install, config wizard walkthrough, verification @na
-		- Create docs/quick-start.md: first-run flow from config init through first ingest @na
-		- Create docs/commands.md: full command reference with flags and examples @na
-		- Create docs/configuration.md: all settings, required vs optional, env vars vs config file @na
-		- Create docs/workflows.md: backlog processing, active campaign, and knowledge import workflows @na
-		- Create docs/troubleshooting.md: pre-flight checklist and errors by category @na
-		- Create docs/development.md: dev env setup, running tests, linting @na
-		- Rewrite README.md: AI agent framing, pip install, quick-start summary, links to docs (~80 lines) @na
-		- Update INDEX.md to reflect new docs structure @na
-		- Update CLAUDE.md tree to reflect all new, moved, and deleted files @na
+	M2 - Documentation Restructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/2) @plan(docs/superpowers/plans/m2-documentation-restructure.md) @done(2026-04-19)
+		- Convert docs/future-improvements.md items to GitHub issues, then delete the file @done(2026-04-19)
+		- Move prd-github-release.md to docs/superpowers/ @done(2026-04-19)
+		- Move prd-config-file-migration.md to docs/superpowers/ @done(2026-04-19)
+		- Move plans/github-public-release.md to docs/superpowers/plans/ @done(2026-04-19)
+		- Move plans/config-file-migration.md to docs/superpowers/plans/ @done(2026-04-19)
+		- Move docs/interview-notes.md to docs/superpowers/ @done(2026-04-19)
+		- Remove the PLAUD mention from CHANGELOG.md Milestone 2 entry @done(2026-04-19)
+		- Create SECURITY.md with GitHub private vulnerability reporting instructions @done(2026-04-19)
+		- Create docs/installation.md: prerequisites, pip install, config wizard walkthrough, verification @done(2026-04-19)
+		- Create docs/quick-start.md: first-run flow from config init through first ingest @done(2026-04-19)
+		- Create docs/commands.md: full command reference with flags and examples @done(2026-04-19)
+		- Create docs/configuration.md: all settings, required vs optional, env vars vs config file @done(2026-04-19)
+		- Create docs/workflows.md: backlog processing, active campaign, and knowledge import workflows @done(2026-04-19)
+		- Create docs/troubleshooting.md: pre-flight checklist and errors by category @done(2026-04-19)
+		- Create docs/development.md: dev env setup, running tests, linting @done(2026-04-19)
+		- Rewrite README.md: AI agent framing, pip install, quick-start summary, links to docs (~80 lines) @done(2026-04-19)
+		- Update INDEX.md to reflect new docs structure @done(2026-04-19)
+		- Update CLAUDE.md tree to reflect all new, moved, and deleted files @done(2026-04-19)
 
 	M3 - CLI Help Text:
 		- Update `ingest` command docstring in src/chronicler/cli/main.py from "Ingest PLAUD session files into the campaign vault" to cover general source material @na

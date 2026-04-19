@@ -40,9 +40,9 @@ Chronicler Release:
 		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on pypi.org @done(2026-04-19)
 		- Push release tag `v0.1.0` to trigger production PyPI publish @done(2026-04-19)
 
-	M5 - Ship It:
-		- Push the final release tag `v0.1.0` to main to trigger the production PyPI publish job
-		- Verify the PyPI badge in README resolves to the published version at pypi.org/project/chronicler-ttrpg
-		- Verify `pip install chronicler-ttrpg` installs successfully and `chronicler --help` works
+	M5 - Ship It: @done(2026-04-19)
+		- Push the final release tag `v0.1.0` to main to trigger the production PyPI publish job @done(2026-04-19)
+		- Verify the PyPI badge in README resolves to the published version at pypi.org/project/chronicler-ttrpg @done(2026-04-19)
+		- Verify `uv tool install chronicler-ttrpg` installs successfully and `chronicler --help` works @done(2026-04-19)
 
 	Archive:

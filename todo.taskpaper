@@ -31,19 +31,14 @@ Chronicler Release:
 		- Update `ingest` command docstring in src/chronicler/cli/main.py from "Ingest PLAUD session files into the campaign vault" to cover general source material @done(2026-04-19)
 		- Update `ingest` FILES argument help text in src/chronicler/cli/main.py from "PLAUD PDF summary and/or transcript .txt files" to describe all accepted formats (PDF, .txt, .md) @done(2026-04-19)
 
-	M4 - Release Infrastructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/8)
+	M4 - Release Infrastructure: @issue(https://github.com/ScottSucksAtProgramming/chronicler/issues/8) @done(2026-04-19)
 		- Rename package to `chronicler-ttrpg` in pyproject.toml (name `chronicler` is taken on PyPI) @done(2026-04-19)
 		- Set version to `0.1.0` in pyproject.toml (down from 1.0.0; macOS-only warrants pre-1.0 signal) @done(2026-04-19)
 		- Regenerate uv.lock after pyproject.toml changes @done(2026-04-19)
 		- Update install instructions in README.md and docs/ to use `pip install chronicler-ttrpg` @done(2026-04-19)
 		- Update PyPI badge URLs in README.md to reference `chronicler-ttrpg` @done(2026-04-19)
-		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on test.pypi.org
-		- Temporarily add `repository-url: https://test.pypi.org/legacy/` to the publish step in .github/workflows/ci.yml to redirect to TestPyPI
-		- Commit the temporary TestPyPI ci.yml change and push pre-release tag `v0.1.0b1` to trigger the CI publish job
-		- Verify the package installs cleanly from TestPyPI: `pip install --index-url https://test.pypi.org/simple/ chronicler-ttrpg`
-		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on pypi.org
-		- Remove the TestPyPI `repository-url` line from .github/workflows/ci.yml, restoring the production PyPI target
-		- Commit and push the restored ci.yml
+		- Configure OIDC trusted publisher for `ScottSucksAtProgramming/chronicler` / `ci.yml` / env `pypi` on pypi.org @done(2026-04-19)
+		- Push release tag `v0.1.0` to trigger production PyPI publish @done(2026-04-19)
 
 	M5 - Ship It:
 		- Push the final release tag `v0.1.0` to main to trigger the production PyPI publish job

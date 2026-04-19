@@ -385,9 +385,7 @@ async def _run_source_ingest_pipeline(
 def ingest(
     files: Annotated[
         list[Path],
-        typer.Argument(
-            help="Source files to ingest. Accepts .pdf, .txt, and .md."
-        ),
+        typer.Argument(help="Source files to ingest. Accepts .pdf, .txt, and .md."),
     ],
     session_number: Annotated[
         Optional[int],

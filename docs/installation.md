@@ -23,7 +23,7 @@ Install each of the following before proceeding:
 ## Install Chronicler
 
 ```bash
-pip install chronicler
+pip install chronicler-ttrpg
 ```
 
 Verify the CLI is available:
@@ -38,13 +38,13 @@ If you use `uv` and want `chronicler` available system-wide without activating
 a virtual environment:
 
 ```bash
-uv tool install chronicler
+uv tool install chronicler-ttrpg
 ```
 
 To update later:
 
 ```bash
-uv tool upgrade chronicler
+uv tool upgrade chronicler-ttrpg
 ```
 
 ## Configure

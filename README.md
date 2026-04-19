@@ -3,7 +3,7 @@
 ![Chronicler banner](docs/assets/banner.png)
 
 [![CI](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml/badge.svg)](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/chronicler)](https://pypi.org/project/chronicler/)
+[![PyPI version](https://img.shields.io/pypi/v/chronicler-ttrpg)](https://pypi.org/project/chronicler-ttrpg/)
 
 Chronicler is an AI agent that turns tabletop RPG session recordings into a
 living Obsidian campaign vault. Feed it session PDFs or transcripts, and it
@@ -15,7 +15,7 @@ linked notes you can actually use at the table.
 ## Install
 
 ```bash
-pip install chronicler
+pip install chronicler-ttrpg
 ```
 
 Then run the setup wizard:

@@ -1,6 +1,6 @@
 [project]
-name = "chronicler"
-version = "1.0.0"
+name = "chronicler-ttrpg"
+version = "0.1.0"
 description = "Local-first CLI for turning tabletop RPG session exports into an Obsidian campaign vault"
 authors = [
     { name = "Scott Kostolni", email = "ScottKostolni+github@gmail.com" },

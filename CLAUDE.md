@@ -10,13 +10,9 @@ AI agent that ingests session recordings and general source materials, extracts 
 chronicler/
   CLAUDE.md
   INDEX.md
-  prd.md
   pyproject.toml
   .env.example
   todo.taskpaper
-  plans/
-    m1-documentation-polish.md  — implementation plan for M1 documentation polish
-    m2-documentation-restructure.md — implementation plan for M2 documentation restructure
   src/
     chronicler/
       __init__.py
@@ -72,7 +68,14 @@ chronicler/
       __init__.py
       test_embeddings.py
   docs/
-    interview-notes.md
+    installation.md          — prerequisites, install options, initial config walkthrough
+    quick-start.md           — first session end-to-end walkthrough
+    commands.md              — every command, flag, and usage example
+    configuration.md         — all settings and environment variable reference
+    workflows.md             — backlog processing, active campaign, knowledge import
+    troubleshooting.md       — pre-flight checklist and common error fixes
+    development.md           — dev environment, tests, linting, contributing
+    ARCHITECTURE.md          — high-level architecture overview for contributors
     superpowers/
       specs/
         2026-04-02-session-scribe-design.md
@@ -82,6 +85,8 @@ chronicler/
         2026-04-02-milestone-1-foundation.md
         2026-04-02-chronicler-rename-and-docs.md
         2026-04-03-knowledge-source-ingest.md
+        m1-documentation-polish.md
+        m2-documentation-restructure.md
   context/
     conventions.md
     lessons.md

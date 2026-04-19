@@ -6,17 +6,28 @@ Quick reference for the repository.
 
 | File | Purpose |
 |------|---------|
-| `README.md` | Main getting-started guide, setup instructions, command reference, and operational workflow |
-| `.env.example` | Example configuration for local setup |
+| `README.md` | Project overview, install, and links to all docs |
+| `.env.example` | Reference list of all `CHRONICLER_` environment variable names |
 | `pyproject.toml` | Package metadata, dependencies, and CLI entrypoint |
 | `INDEX.md` | This file |
 | `CLAUDE.md` | Project-specific operating rules, note-taking requirements, and repo tree |
 
-## Active Documentation
+## User Documentation
 
 | File | Purpose |
 |------|---------|
-| `docs/interview-notes.md` | Original discovery notes and project context |
+| `docs/installation.md` | Prerequisites, install options, initial configuration walkthrough |
+| `docs/quick-start.md` | First session end-to-end walkthrough |
+| `docs/commands.md` | Every command, flag, and usage example |
+| `docs/configuration.md` | All settings and environment variable reference |
+| `docs/workflows.md` | Backlog processing, active campaign, and knowledge import patterns |
+| `docs/troubleshooting.md` | Pre-flight checklist and common error fixes |
+| `docs/development.md` | Dev environment setup, tests, linting, contributing |
+
+## Architecture Documentation
+
+| File | Purpose |
+|------|---------|
 | `docs/ARCHITECTURE.md` | Public-facing high-level architecture overview for contributors |
 | `docs/superpowers/specs/2026-04-02-session-scribe-design.md` | Historical primary architecture spec created before the rename |
 | `docs/superpowers/specs/2026-04-02-chronicler-rename-and-docs-design.md` | Rename and documentation design for the Chronicler transition |
@@ -37,7 +48,7 @@ Quick reference for the repository.
 | `src/chronicler/cli/` | Typer CLI commands and entrypoint |
 | `src/chronicler/config/` | Environment-driven settings |
 | `src/chronicler/gateway/` | LLM provider integration |
-| `src/chronicler/ingestion/` | PLAUD parsing plus general source parsing and conservative ingest classification |
+| `src/chronicler/ingestion/` | Session PDF and transcript parsing, general source parsing, and conservative ingest classification |
 | `src/chronicler/extraction/` | Session and knowledge-source extraction prompts and orchestration |
 | `src/chronicler/vault/` | Obsidian integration, source archiving, additive note updates, deterministic normalization, deduplication, metrics |
 | `src/chronicler/retrieval/` | Embeddings, indexing, and retrieval |
@@ -72,8 +83,6 @@ Quick reference for the repository.
 
 | File | Purpose |
 |------|---------|
-| `prd.md` | Original project requirements draft |
-| `plans/` | Active implementation plans (feature milestones linked to GitHub issues) |
 | `docs/superpowers/plans/` | Milestone implementation plans from earlier development phases |
 | `docs/superpowers/plans/2026-04-02-milestone-1-foundation.md` | Early milestone implementation record |
 | `docs/superpowers/plans/2026-04-02-milestone-2-ingestion-extraction.md` | Early ingestion/extraction implementation record |

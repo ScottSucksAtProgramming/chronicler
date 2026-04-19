@@ -5,336 +5,58 @@
 [![CI](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml/badge.svg)](https://github.com/ScottSucksAtProgramming/chronicler/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/chronicler)](https://pypi.org/project/chronicler/)
 
-Chronicler is a local-first CLI for turning tabletop RPG session exports into an Obsidian campaign vault. It ingests session exports and source material — PLAUD summary PDFs, transcript text files, and general documents in markdown, plain text, and PDF — extracts campaign entities with an LLM, writes linked notes into your vault, builds a local retrieval index, and gives you a chat interface over your campaign history.
+Chronicler is an AI agent that turns tabletop RPG session recordings into a
+living Obsidian campaign vault. Feed it session PDFs or transcripts, and it
+extracts NPCs, locations, factions, plot threads, and key events — then writes
+linked notes you can actually use at the table.
 
-> **Platform support:** Chronicler currently requires macOS. The Obsidian CLI integration depends on the macOS desktop app binary. Linux and Windows are not yet supported.
+> **macOS only.** The Obsidian integration depends on the macOS desktop app.
 
-## What It Does
-
-- Initializes a structured Obsidian vault for campaign notes
-- Ingests session exports, PLAUD files, and general source documents (markdown, plain text, PDF)
-- Extracts NPCs, locations, factions, loot, plot threads, and a session recap
-- Writes and updates campaign notes in Obsidian
-- Tracks open threads and review findings
-- Manages player character notes so PCs do not get mistaken for NPCs
-- Builds a local ChromaDB index over your vault
-- Provides a Textual chat UI for asking campaign questions
-
-## Current Architecture
-
-Chronicler is a Python package with a Typer CLI, Pydantic models, an LLM gateway, Obsidian vault management, extraction/retrieval modules, and a Textual-based chat app.
-
-It currently supports:
-
-- `kimi` via the Kimi CLI for extraction and chat
-- `nanogpt` via the nano-gpt.com API
-- LM Studio for local embeddings used by reindexing and chat
-- Obsidian CLI for vault discovery, reading, and writing
-
-## Prerequisites
-
-You need the following installed before using Chronicler:
-
-- Python 3.12+
-- `uv`
-- Obsidian desktop with CLI support enabled (macOS only)
-- A local Obsidian vault for your campaign
-- One LLM provider:
-  - Kimi CLI
-  - nano-gpt.com API key
-- LM Studio with an embedding model loaded if you want `reindex` or `chat`
-
-Important current constraint:
-
-- The Obsidian CLI wrapper currently defaults to the macOS app binary at `/Applications/Obsidian.app/Contents/MacOS/obsidian`
-
-## Installation
-
-Clone the repo and install dependencies:
+## Install
 
 ```bash
-git clone https://github.com/ScottSucksAtProgramming/chronicler chronicler
-cd chronicler
-uv sync
+pip install chronicler
 ```
 
-Verify the CLI is available:
+Then run the setup wizard:
 
 ```bash
-uv run chronicler --help
+chronicler config init
+chronicler init
 ```
 
-## Global CLI Install
+See [docs/installation.md](docs/installation.md) for prerequisites and a
+step-by-step walkthrough.
 
-If you want `chronicler` available as a normal shell command from anywhere on your machine, install it as a global uv tool from the repo root:
+## Quick Start
 
 ```bash
-uv tool install .
+# Add your player characters
+chronicler party add --player "Alice" --character "Nyra" --class "Wizard"
+
+# Ingest a session
+chronicler ingest --session 1 /path/to/session-01.pdf
+
+# Review the vault
+chronicler review
+chronicler ask
 ```
 
-After that, you can run:
-
-```bash
-chronicler --help
-```
-
-When you make local changes and want to refresh the installed command, run:
-
-```bash
-uv tool uninstall chronicler
-uv tool install .
-```
-
-To remove the global command later:
-
-```bash
-uv tool uninstall chronicler
-```
-
-## Configuration
-
-Initialize the persistent config file with the built-in wizard:
-
-```bash
-uv run chronicler config init
-```
-
-By default Chronicler stores `config.toml` in the standard user config directory for your OS:
-
-- macOS: `~/Library/Application Support/chronicler/config.toml`
-- Linux: `${XDG_CONFIG_HOME:-~/.config}/chronicler/config.toml`
-- Windows: `%APPDATA%\chronicler\config.toml`
-
-The wizard collects the required settings for you and can also capture optional overrides for LM Studio, embeddings, and logging.
-
-Inspect the active configuration at any time:
-
-```bash
-uv run chronicler config show
-```
-
-Bare `uv run chronicler config` still works and behaves the same as `config show`.
-
-Environment variables prefixed with `CHRONICLER_` still override the config file for CI, scripts, and temporary overrides. `.env.example` remains in the repo as a reference document for those environment variable names.
-
-## Getting Started
-
-Recommended first-run flow:
-
-1. Create or choose an Obsidian vault for your campaign.
-2. Run `uv run chronicler config init`.
-3. Run `uv run chronicler init`.
-4. Add your party members with `chronicler party add`.
-5. Ingest one session with `chronicler ingest`.
-6. Run `chronicler review` and `chronicler ask`.
-7. Open `chronicler chat` after the vault has been indexed.
-
-Optional: run `chronicler improve` at any time for periodic vault maintenance.
-
-### 1. Initialize the Vault
-
-```bash
-uv run chronicler init
-```
-
-This seeds the vault with:
-
-- `Sessions/`
-- `Party/`
-- `NPCs/`
-- `Locations/`
-- `Factions/`
-- `Loot/`
-- `Plot-Threads/`
-- `_Agent/`
-- `_Dashboard.md`
-- `Timeline.md`
-- review and memory files under `_Agent/`
-
-### 2. Add Player Characters
-
-Add your PCs before ingestion so extraction has party context:
-
-```bash
-uv run chronicler party add --player "Alice" --character "Nyra" --class "Wizard"
-uv run chronicler party add --player "Ben" --character "Thorn" --class "Ranger"
-uv run chronicler party list
-```
-
-Remove a PC note if needed:
-
-```bash
-uv run chronicler party remove --character "Nyra"
-```
-
-### 3. Ingest a Session
-
-The safest workflow is to pass an explicit session number:
-
-```bash
-uv run chronicler ingest --session 22 /path/to/session-22-summary.pdf /path/to/session-22-transcript.txt
-```
-
-You can ingest only a PLAUD PDF summary or only a session transcript, but the best results come from supplying both. You can also ingest general source documents in markdown, plain text, and PDF.
-
-During ingest, Chronicler:
-
-- parses session exports, PLAUD files, and general source documents
-- loads vault context
-- filters banter
-- extracts structured entities
-- writes notes to the vault
-- records quality metrics
-- attempts an automatic reindex if LM Studio is available
-
-### 4. Review Open Questions
-
-Run a vault review:
-
-```bash
-uv run chronicler review
-```
-
-This prints findings and appends them to `_Agent/Review-Log.md`.
-
-Then review pending questions:
-
-```bash
-uv run chronicler ask
-```
-
-If you run it in an interactive terminal, you can answer questions inline and append responses to the corresponding note under `_Agent/Questions/`.
-
-### 5. Rebuild Retrieval Index
-
-If LM Studio is running, you can rebuild the vector index manually:
-
-```bash
-uv run chronicler reindex
-```
-
-This stores local index data under `.chronicler/` inside your vault path.
-
-### 6. Ask Questions In Chat
-
-Once the index exists:
-
-```bash
-uv run chronicler chat
-```
-
-Inside chat:
-
-- Ask free-form campaign questions
-- Use `/help` for chat commands
-- Use `/quit` to exit
-
-## Command Reference
-
-### `chronicler init`
-
-Initializes the Obsidian vault structure and seed notes.
-
-### `chronicler party list`
-
-Shows configured player characters.
-
-### `chronicler party add --player NAME --character NAME [--class CLASS]`
-
-Creates or updates a player character note in `Party/`.
-
-### `chronicler party remove --character NAME`
-
-Deletes a player character note from `Party/`.
-
-### `chronicler ingest [--session N] FILE...`
-
-Processes session exports and campaign source material into the vault. Accepts PLAUD PDF summaries, session transcripts (.txt), and general source documents (markdown, plain text, PDF).
-
-### `chronicler review`
-
-Runs consistency checks over the vault and logs findings.
-
-### `chronicler improve`
-
-Runs deterministic vault maintenance and queues questions for ambiguous notes.
-
-### `chronicler ask`
-
-Displays pending agent questions and, in a TTY session, allows inline answers.
-
-### `chronicler reindex`
-
-Rebuilds the embedding index used by retrieval and chat.
-
-### `chronicler chat`
-
-Launches the interactive campaign Q&A TUI.
-
-### `chronicler config show`
-
-Prints active configuration and validates the vault path.
-
-### `chronicler config init`
-
-Runs the interactive wizard that writes `config.toml`.
-
-### `chronicler stats`
-
-Shows extraction quality metrics accumulated across processed sessions.
-
-## Typical Workflow
-
-For backlog processing:
-
-1. Add your party once.
-2. Ingest a session with `--session`.
-3. Review the written notes in Obsidian.
-4. Run `review`.
-5. Answer pending `ask` questions.
-6. Re-ingest or continue to the next session.
-
-For active campaign use:
-
-1. Ingest the newest session after play.
-2. Review open threads in Obsidian.
-3. Use `chat` before the next game to refresh your memory.
-
-## Troubleshooting
-
-### `CHRONICLER_VAULT_NAME is not set`
-
-Run `chronicler config init` and make sure the saved `vault_name` matches the vault name Obsidian CLI uses, not just the filesystem folder name.
-
-### Obsidian CLI errors
-
-Make sure:
-
-- Obsidian desktop is installed
-- the app is running
-- the configured vault exists
-- the `vault_name` in `config.toml` matches the one shown in Obsidian
-
-### LM Studio connection errors
-
-`chat` and `reindex` require LM Studio to be running with an embedding model loaded. Verify the base URL and model name in `config.toml`.
-
-### nano-gpt provider errors
-
-If `CHRONICLER_LLM_PROVIDER=nanogpt`, you must also set `CHRONICLER_NANOGPT_API_KEY`.
-
-### Kimi CLI not found
-
-Install the Kimi CLI and ensure the `kimi` command is on your `PATH`.
-
-## Repository Guide
-
-- Source code lives under `src/chronicler/`
-- Tests live under `tests/`
-- Historical discovery and planning docs live under `docs/`
-- Architecture overview: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- A quick file map lives in `INDEX.md`
-
-## Project Status
-
-This repo is usable now for local vault initialization, ingestion, review, indexing, and chat. It is still an actively evolving tool, so expect implementation-oriented docs and some rough edges around environment assumptions.
+The [Quick Start guide](docs/quick-start.md) walks through your first session
+end-to-end.
+
+## Documentation
+
+| Guide | Contents |
+|---|---|
+| [Installation](docs/installation.md) | Prerequisites, install options, initial config |
+| [Quick Start](docs/quick-start.md) | First session walkthrough |
+| [Command Reference](docs/commands.md) | Every command, flag, and example |
+| [Configuration](docs/configuration.md) | All settings and environment variables |
+| [Workflows](docs/workflows.md) | Backlog processing, active campaign, knowledge import |
+| [Troubleshooting](docs/troubleshooting.md) | Common errors and fixes |
+| [Development](docs/development.md) | Dev environment, tests, contributing |
+
+## License
+
+GNU AGPL v3 or later — see [LICENSE](LICENSE).
